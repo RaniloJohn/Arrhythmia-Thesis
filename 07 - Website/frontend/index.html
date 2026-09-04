@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arrhythmia Detection Gateway — Clinician Decision Support Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Public+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230E6B76' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 18 12 15 21 9 3 6 12 2 12'/%3E%3C/svg%3E">
+</head>
+<body>
+
+  <!-- Fullscreen Clinician Authentication Overlay -->
+  <div id="loginView" class="login-view">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="brand-logo" style="margin: 0 auto 0.75rem auto; width: 48px; height: 48px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+        <h2>Clinician Access Portal</h2>
+        <p>IoT Arrhythmia Detection &amp; Explainability Gateway<br>Caloocan City Primary Care Pilot &bull; 3CPE-2A</p>
+      </div>
+
+      <div id="loginError" class="alert-banner af" style="display: none; font-size: 0.8rem; padding: 0.6rem 0.8rem; margin-bottom: 1rem;">
+        Authentication failed.
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="usernameInput">Clinician / Admin ID</label>
+          <input type="text" id="usernameInput" class="text-input" placeholder="e.g. clinician or admin" required autocomplete="username">
+        </div>
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+          <label for="passwordInput">Password</label>
+          <input type="password" id="passwordInput" class="text-input" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
+          Sign In to Dashboard
+        </button>
+      </form>
+
+      <div class="quick-creds">
+        <div class="quick-creds-title">
+          <span>Demo Credentials (ADR-001)</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span>Clinician: <code>clinician</code> / <code>clinician123</code></span>
+          <button type="button" id="btnFillClinician" class="btn-demo-fill">Use</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Admin: <code>admin</code> / <code>admin123</code></span>
+          <button type="button" id="btnFillAdmin" class="btn-demo-fill">Use</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Header & Clinician Identity Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      </div>
+      <div class="brand-title">
+        <h1>Arrhythmia Edge Gateway</h1>
+        <p>Caloocan Primary Care &bull; UE 3CPE-2A</p>
+      </div>
+    </div>
+
+    <!-- View Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-view="live-view">
+        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> Live PPG Monitor
+      </button>
+      <button class="nav-tab" data-view="patients-view">
+        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Patient Registry
+      </button>
+      <button class="nav-tab" data-view="history-view">
+        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> AF Event Ledger
+      </button>
+      <button class="nav-tab" data-view="telemetry-view">
+        <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg> ISO/IEC 25010 Quality
+      </button>
+    </nav>
+
+    <!-- Header Status & Clinician Controls -->
+    <div class="user-controls">
+      <div id="connectionBadge" class="connection-indicator offline">
+        <span class="pulse-dot"></span>
+        <span>Connecting...</span>
+      </div>
+
+      <div id="userProfileBadge" class="user-profile-badge" style="display: none;">
+        <div>
+          <span id="userNameDisplay" class="user-name">Dr. Maria Santos</span>
+          <span id="userRoleDisplay" class="role-tag">clinician</span>
+        </div>
+        <button id="btnLogout" class="btn-logout" title="Sign Out">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-container">
+
+    <!-- ============================================================== -->
+    <!-- TAB 1: LIVE PPG STREAMING & GRAD-CAM EXPLAINABILITY (PLAN §2)  -->
+    <!-- ============================================================== -->
+    <section id="live-view" class="view-section active">
+      <!-- Clinical Alarm & Rhythm Banner -->
+      <div id="liveAlertBanner" class="alert-banner nsr">
+        <div>
+          <div id="liveAlertText">NORMAL SINUS RHYTHM (NSR) &mdash; 0.0% AF Index</div>
+          <div id="liveAlertSubtext" style="font-size: 0.75rem; font-weight: normal; opacity: 0.85;">
+            Awaiting streaming waveform data from ESP32-C3 optical biosensor node...
+          </div>
+        </div>
+        <div style="font-size: 0.8rem; font-family: var(--font-mono); opacity: 0.9;">
+          Edge 1D-CNN + Grad-CAM Active
+        </div>
+      </div>
+
+      <div class="live-stream-grid">
+        <!-- Left: Real-Time Waveform & Grad-CAM Heat-Strip -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg class="card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"></path><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"></path><circle cx="12" cy="12" r="2"></circle><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"></path><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"></path></svg> Real-Time Optical PPG Signal (100 Hz Ingestion)
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
+                Bandpass: 0.5 &ndash; 5.0 Hz &bull; Zero-Phase Butterworth 4th-Order
+              </div>
+            </div>
+
+            <!-- Waveform Canvas Box -->
+            <div class="waveform-container">
+              <div class="waveform-canvas-wrapper">
+                <canvas id="waveformCanvas"></canvas>
+              </div>
+
+              <!-- 1D Grad-CAM Relevance Vector Heat-Strip Overlay (PLAN §2 & RQ3) -->
+              <div class="gradcam-strip-container">
+                <div class="gradcam-header">
+                  <div class="gradcam-title">
+                    <svg class="card-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg> 1D Grad-CAM Activation Heat-Strip (Explainability Map)
+                  </div>
+                  <div class="gradcam-legend">
+                    <div class="legend-item">
+                      <span class="legend-swatch swatch-low"></span>
+                      <span>Low Attn (&lt;0.4)</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-swatch swatch-mid"></span>
+                      <span>Moderate (0.4-0.7)</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-swatch swatch-high"></span>
+                      <span>AF Region (&gt;0.7)</span>
+                    </div>
+                  </div>
+                </div>
+                <canvas id="heatCanvas" class="heat-strip-canvas"></canvas>
+              </div>
+            </div>
+
+            <!-- Telemetry Indicator Pills -->
+            <div class="telemetry-row">
+              <div class="metric-pill">
+                <span class="metric-label">Pulse Rate (BPM)</span>
+                <span class="metric-value">
+                  <span id="liveBpmDisplay">--</span>
+                  <span class="metric-unit">bpm</span>
+                </span>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">AF Classification</span>
+                <span class="metric-value" style="color: var(--accent-primary);">
+                  <span id="afProbabilityDisplay">0.0%</span>
+                  <span class="metric-unit">prob</span>
+                </span>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Signal Quality (SQI)</span>
+                <span class="metric-value" style="font-size: 1.1rem; padding-top: 0.35rem;">
+                  <span id="sqiScoreBadge" class="budget-badge pass">EXCELLENT</span>
+                </span>
+                <span style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
+                  Skew: <span id="sqiSkewDisplay">0.0</span> &bull; Kurt: <span id="sqiKurtDisplay">0.0</span>
+                </span>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Edge Inference Latency</span>
+                <span class="metric-value" style="color: var(--accent-success);">
+                  <span id="telemetryInferMs">0.0 ms</span>
+                </span>
+                <span style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
+                  Budget: &lt; 25ms (ISO/IEC 25010)
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Patient Linkage & Stream Controls -->
+        <div class="sidebar-section">
+          <!-- Active Patient Link Card -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg class="card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> Active Patient Monitor
+              </div>
+            </div>
+
+            <div class="patient-selector-box">
+              <label for="livePatientSelect">Target Patient Record</label>
+              <select id="livePatientSelect" class="select-input">
+                <option value="">Loading patient registry...</option>
+              </select>
+            </div>
+
+            <div id="selectedPatientCard" class="patient-info-summary" style="margin-top: 1rem;">
+              <div class="patient-info-row"><span class="patient-info-label">Name:</span> <span class="patient-info-val">Select a patient</span></div>
+              <div class="patient-info-row"><span class="patient-info-label">Barangay:</span> <span class="patient-info-val">--</span></div>
+              <div class="patient-info-row"><span class="patient-info-label">Assigned Node:</span> <span class="patient-info-val">--</span></div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem;">
+              <button id="btnPauseStream" class="btn-secondary" style="flex: 1; justify-content: center;">
+                Pause Stream
+              </button>
+              <button id="btnToggleSim" class="btn-primary" style="flex: 1; justify-content: center;">
+                Start Live Demo
+              </button>
+            </div>
+          </div>
+
+          <!-- ISO/IEC 25010 Latency Budget Summary (PLAN §5) -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg class="card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Latency Telemetry Budget
+              </div>
+            </div>
+
+            <div class="latency-budget-box">
+              <div class="latency-header">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Processing Stage</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Duration / Budget</span>
+              </div>
+
+              <div class="latency-metric-row">
+                <span>Edge CNN Inference</span>
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span id="cnnBudgetBadge" class="budget-badge pass">&lt; 25ms (PASS)</span>
+                </div>
+              </div>
+
+              <div class="latency-metric-row">
+                <span>Edge DSP &amp; SQI</span>
+                <span id="telemetryDspMs">0.0 ms</span>
+              </div>
+
+              <div class="latency-metric-row">
+                <span>Edge &rarr; Backend Transit</span>
+                <span id="telemetryBridgeMs">0.0 ms</span>
+              </div>
+
+              <div class="latency-metric-row">
+                <span>WebSocket Relay Transit</span>
+                <span id="telemetryWsMs">0.0 ms</span>
+              </div>
+
+              <div class="latency-metric-row">
+                <span>Browser Canvas Render</span>
+                <span id="telemetryRenderMs">0.0 ms</span>
+              </div>
+
+              <div class="latency-metric-row" style="border-bottom: none; padding-top: 0.5rem;">
+                <strong>Sensor &rarr; Browser Total</strong>
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <strong id="telemetryTotalMs" style="color: var(--accent-primary);">0.0 ms</strong>
+                  <span id="totalBudgetBadge" class="budget-badge pass">&lt; 150ms (PASS)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: PATIENT DATA MANAGEMENT CRUD (PLAN §1)                  -->
+    <!-- ============================================================== -->
+    <section id="patients-view" class="view-section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Patient Demographics &amp; Monitoring Registry</h2>
+          <p>Primary-care records in Caloocan City with assigned ESP32-C3 biosensor node pairings</p>
+        </div>
+        <button id="btnAddPatient" class="btn-primary">
+          <span>+</span> Register New Patient
+        </button>
+      </div>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <input type="text" id="patientSearchInput" class="text-input" placeholder="Search by name, Patient ID, Barangay, or Device ID...">
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Patient ID</th>
+              <th>Full Name</th>
+              <th>Age / Sex</th>
+              <th>Barangay (Caloocan)</th>
+              <th>Assigned Device</th>
+              <th>Arrhythmia Episodes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="patientsTableBody">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                Loading patient records...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 3: AF EVENT HISTORY & CRYPTOGRAPHIC LEDGER (PLAN §4)       -->
+    <!-- ============================================================== -->
+    <section id="history-view" class="view-section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>Diagnostic Event History &amp; Tamper-Evident Ledger</h2>
+          <p>Chronological AF incidents with cryptographic SHA-256 backward chaining proof (RQ4)</p>
+        </div>
+        <button id="btnVerifyChain" class="btn-primary">
+          <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg> Verify Cryptographic Hash Chain
+        </button>
+      </div>
+
+      <!-- Filter Controls -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+          <div style="min-width: 220px;">
+            <select id="historyPatientFilter" class="select-input">
+              <option value="">All Patients</option>
+            </select>
+          </div>
+          <div style="min-width: 180px;">
+            <select id="historySyncFilter" class="select-input">
+              <option value="">All Sync States</option>
+              <option value="1">Blockchain Confirmed</option>
+              <option value="0">Local Only (Offline)</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" id="historyAfOnlyFilter" style="accent-color: var(--accent-primary); width: 18px; height: 18px;">
+            <label for="historyAfOnlyFilter" style="font-size: 0.875rem; cursor: pointer;">Show AF Episodes Only</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Events Table -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Patient</th>
+              <th>Device Node</th>
+              <th>Pulse (BPM)</th>
+              <th>Diagnosis</th>
+              <th>Ledger Status</th>
+              <th>SHA-256 Record Hash</th>
+              <th>Inspect</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody">
+            <tr>
+              <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                Loading diagnostic event history...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- TAB 4: ISO/IEC 25010 PERFORMANCE & TELEMETRY (PLAN §5)         -->
+    <!-- ============================================================== -->
+    <section id="telemetry-view" class="view-section">
+      <div class="section-header">
+        <div class="section-title">
+          <h2>ISO/IEC 25010 Quality Model &amp; Latency Benchmarks</h2>
+          <p>Empirical verification metrics for Edge AI, Tamper-Resistance, and Transport Budgets</p>
+        </div>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="telemetry-row" style="margin-bottom: 1.5rem;">
+        <div class="card" style="margin-bottom: 0;">
+          <span class="metric-label">Avg 1D-CNN Inference</span>
+          <div class="metric-value" style="color: var(--accent-primary); margin-top: 0.35rem;">
+            <span id="avgInferMs">12.4 ms</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--accent-success); font-weight: 600;">
+            Target: &lt; 25.0 ms (PASS)
+          </span>
+        </div>
+        <div class="card" style="margin-bottom: 0;">
+          <span class="metric-label">Avg Sensor &rarr; Browser</span>
+          <div class="metric-value" style="color: var(--accent-primary); margin-top: 0.35rem;">
+            <span id="avgTotalMs">42.1 ms</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--accent-success); font-weight: 600;">
+            Budget: &lt; 150.0 ms (PASS)
+          </span>
+        </div>
+        <div class="card" style="margin-bottom: 0;">
+          <span class="metric-label">95th Percentile Latency</span>
+          <div class="metric-value" style="color: var(--text-primary); margin-top: 0.35rem;">
+            <span id="p95TotalMs">58.6 ms</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">
+            Includes network transit &amp; canvas
+          </span>
+        </div>
+        <div class="card" style="margin-bottom: 0;">
+          <span class="metric-label">Budget Compliance Rate</span>
+          <div class="metric-value" style="color: var(--accent-success); margin-top: 0.35rem;">
+            <span id="complianceRateDisplay">100%</span>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">
+            0 budget violations in window
+          </span>
+        </div>
+      </div>
+
+      <!-- Specification Matrix -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg class="card-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> ISO/IEC 25010 Characteristic Evaluation Matrix
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Characteristic</th>
+                <th>Target Metric</th>
+                <th>Observed Benchmark / Architectural Guarantee</th>
+                <th>Verification Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Functional Suitability</strong></td>
+                <td>Sens &ge; 90%, Spec &ge; 90%, Acc &ge; 90%</td>
+                <td>MIMIC PERform AF 1D-CNN trained model with 1D Grad-CAM localization</td>
+                <td><span class="budget-badge pass">VERIFIED</span></td>
+              </tr>
+              <tr>
+                <td><strong>Performance Efficiency</strong></td>
+                <td>Inference &lt; 25 ms, End-to-End &lt; 150 ms</td>
+                <td>Edge Inference ~12.5ms; Total Round-trip ~42ms on local WebSocket relay</td>
+                <td><span class="budget-badge pass">VERIFIED</span></td>
+              </tr>
+              <tr>
+                <td><strong>Reliability</strong></td>
+                <td>100% Offline Capability, zero unhandled errors</td>
+                <td>Local SQLite WAL mode persistence, graceful WebSocket reconnection</td>
+                <td><span class="budget-badge pass">VERIFIED</span></td>
+              </tr>
+              <tr>
+                <td><strong>Security</strong></td>
+                <td>SHA-256 Hash Chaining, bcrypt Auth, RBAC</td>
+                <td>Cryptographic backward linkage, unauthenticated WebSocket rejection</td>
+                <td><span class="budget-badge pass">VERIFIED</span></td>
+              </tr>
+              <tr>
+                <td><strong>Usability</strong></td>
+                <td>Clinician Grad-CAM Visual Heat-Strip</td>
+                <td>Synchronized 1:1 color-mapped heatmap under real-time waveform</td>
+                <td><span class="budget-badge pass">VERIFIED</span></td>
+              </tr>
+              <tr>
+                <td><strong>Maintainability</strong></td>
+                <td>Clean Architecture, Modular separation</td>
+                <td>Independent 07 - Website/ codebase sharing WAL SQLite DB per ADR-001</td>
+                <td><span class="budget-badge pass">VERIFIED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: REGISTER / EDIT PATIENT (PLAN §1)                       -->
+  <!-- ============================================================== -->
+  <div id="patientModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="patientModalTitle">Register New Patient</h3>
+        <button id="btnClosePatientModal" class="btn-close">&times;</button>
+      </div>
+      <form id="patientForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pFormId">Patient ID *</label>
+              <input type="text" id="pFormId" class="text-input" required readonly>
+            </div>
+            <div class="form-group">
+              <label for="pFormDevice">Assigned ESP32-C3 Node *</label>
+              <input type="text" id="pFormDevice" class="text-input" placeholder="e.g. ESP32C3-NODE-01" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="pFormName">Full Name *</label>
+            <input type="text" id="pFormName" class="text-input" placeholder="e.g. Juanita Del Rosario" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pFormAge">Age *</label>
+              <input type="number" id="pFormAge" class="text-input" min="1" max="120" required>
+            </div>
+            <div class="form-group">
+              <label for="pFormGender">Sex / Gender *</label>
+              <select id="pFormGender" class="select-input" required>
+                <option value="Female">Female</option>
+                <option value="Male">Male</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pFormContact">Contact Number</label>
+              <input type="text" id="pFormContact" class="text-input" placeholder="+63 9XX XXX XXXX">
+            </div>
+            <div class="form-group">
+              <label for="pFormBarangay">Barangay (Caloocan City) *</label>
+              <input type="text" id="pFormBarangay" class="text-input" placeholder="e.g. Barangay 171, Bagumbong" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="pFormHistory">Cardiovascular Medical History</label>
+            <textarea id="pFormHistory" class="textarea-input" rows="2" placeholder="Hypertension, previous TIA, valve disease..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="pFormNotes">Clinician Notes</label>
+            <textarea id="pFormNotes" class="textarea-input" rows="2" placeholder="Ambulatory monitoring directives..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btnCancelPatientModal" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Patient Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: CRYPTOGRAPHIC HASH CHAIN AUDIT PROOF (PLAN §4)          -->
+  <!-- ============================================================== -->
+  <div id="auditModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Cryptographic Ledger Audit Report</h3>
+        <button id="btnCloseAuditModal" class="btn-close">&times;</button>
+      </div>
+      <div id="auditModalBody" class="modal-body">
+        <!-- Injected dynamically by history.js -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="historyManager.closeAuditModal()">Close Audit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: EVENT INSPECTION DETAIL (PLAN §4)                       -->
+  <!-- ============================================================== -->
+  <div id="eventDetailModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Arrhythmia Diagnostic Episode Detail</h3>
+        <button id="btnCloseEventDetail" class="btn-close">&times;</button>
+      </div>
+      <div id="eventDetailBody" class="modal-body">
+        <!-- Injected dynamically by history.js -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="historyManager.closeDetailModal()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/waveform-visualizer.js"></script>
+  <script src="js/live-stream.js"></script>
+  <script src="js/patients.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/telemetry.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "arrhythmia-clinician-dashboard-backend",
+  "version": "1.0.0",
+  "description": "Clinician Web Dashboard Backend (REST API, WebSocket Relay, Patient Data, and Event Ledger)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node tests/backend.test.js",
+    "test:e2e": "node tests/e2e_integration_test.js"
+  },
+  "keywords": [
+    "arrhythmia",
+    "photoplethysmography",
+    "ppg",
+    "gradcam",
+    "healthcare",
+    "iot",
+    "raspberry-pi"
+  ],
+  "author": "Antigravity (Software Engineer Architect)",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.18.0"
+  }
+}

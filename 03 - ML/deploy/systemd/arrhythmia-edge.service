@@ -1,0 +1,16 @@
+[Unit]
+Description=Arrhythmia Edge Inference & Serial Acquisition Service
+After=network.target arrhythmia-website.service
+Wants=arrhythmia-website.service
+
+[Service]
+Type=simple
+User=ranilo
+WorkingDirectory=/home/ranilo/Arrhythmia Thesis/03 - ML
+ExecStart=/usr/bin/python3 edge_inference/runner.py
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

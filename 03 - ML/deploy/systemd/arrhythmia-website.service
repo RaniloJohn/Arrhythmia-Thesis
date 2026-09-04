@@ -1,0 +1,16 @@
+[Unit]
+Description=Arrhythmia Clinician Dashboard Website & WebSocket Relay
+After=network.target
+
+[Service]
+Type=simple
+User=ranilo
+WorkingDirectory=/home/ranilo/Arrhythmia Thesis/07 - Website/backend
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=3
+Environment=NODE_ENV=production
+Environment=PORT=8080
+
+[Install]
+WantedBy=multi-user.target

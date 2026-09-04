@@ -1,0 +1,38 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Runtime SQLite database (generated locally; contains local/demo data, not source)
+03 - ML/storage/*.db
+03 - ML/storage/*.db-shm
+03 - ML/storage/*.db-wal
+
+# Large ML datasets / trained weights - too large for git, fetch separately
+03 - ML/data/deepbeat/*.npz
+03 - ML/data/deepbeat/*.h5
+03 - ML/data/deepbeat/Dataset.zip
+03 - ML/data/deepbeat/download.log
+
+# Obsidian local workspace state (machine-specific, not shared config)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Scratch working files
+scratch/
