@@ -28,23 +28,6 @@ class AuthManager {
       this.btnLogout.addEventListener('click', () => this.handleLogout());
     }
 
-    // Demo Fill Buttons
-    const btnFillClinician = document.getElementById('btnFillClinician');
-    if (btnFillClinician) {
-      btnFillClinician.addEventListener('click', () => {
-        this.usernameInput.value = 'clinician';
-        this.passwordInput.value = 'clinician123';
-      });
-    }
-
-    const btnFillAdmin = document.getElementById('btnFillAdmin');
-    if (btnFillAdmin) {
-      btnFillAdmin.addEventListener('click', () => {
-        this.usernameInput.value = 'admin';
-        this.passwordInput.value = 'admin123';
-      });
-    }
-
     // Custom unauthorized event from API client
     window.addEventListener('auth:unauthorized', () => {
       this.showLogin('Your session has expired. Please sign in again.');

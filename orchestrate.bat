@@ -12,7 +12,7 @@ claude -p "%USER_PROMPT%. Output a concise checklist in PLAN.md."
 
 echo.
 echo [2/2] Antigravity is executing the tasks...
-agy "Read PLAN.md and implement the requested changes directly in the workspace."
+agy --print "Read PLAN.md and implement the requested changes directly in the workspace."
 
 echo.
 echo ===================================================

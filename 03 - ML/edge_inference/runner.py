@@ -133,16 +133,43 @@ class SyntheticPPGGenerator:
         }
 
 
+def format_window_summary(res: dict) -> str:
+    """Render one processed window for the console log.
+
+    Windows rejected by the skin-contact or signal-quality gate carry no BPM,
+    AF probability or Grad-CAM output, so this must not assume those fields are
+    populated. Printing a placeholder number for an invalid window is precisely
+    what made noise look like a vital sign.
+    """
+    if not res.get("measurement_valid", True):
+        return (f"NO MEASUREMENT ({res.get('invalid_reason', 'unknown')}) | "
+                f"median_IR={res.get('median_ir')} | "
+                f"SQI={res.get('sqi', {}).get('sqi_score')}")
+
+    lat = res.get("latencies", {})
+    return (f"BPM={res['bpm']} | AF_Prob={res['af_probability']:.2%} | "
+            f"AF={res['af_detected']} | SQI={res['sqi']['sqi_score']} | "
+            f"Infer={lat.get('inference_ms')}ms (<25ms: {lat.get('budget_met')})")
+
+
 class EdgeInferenceRunner:
     def __init__(self,
                  db_path: Optional[str] = None,
-                 patient_id: str = "PAT-CAL-001",
+                 patient_id: Optional[str] = None,
                  device_id: str = "ESP32C3-NODE-01",
                  window_size: int = 1000,
                  step_size: int = 100,  # 1-second step @ 100Hz
                  dashboard_port: int = 5051,
                  http_ingest_url: Optional[str] = None):
-        self.patient_id = patient_id
+        # Resolve patient_id from argument or TARGET_PATIENT_ID env var (PLAN §2)
+        resolved_patient_id = patient_id or os.environ.get("TARGET_PATIENT_ID")
+        if not resolved_patient_id:
+            raise ValueError(
+                "FATAL: No target patient configured for edge runner. "
+                "Specify --patient <PATIENT_ID> or set TARGET_PATIENT_ID in the environment."
+            )
+
+        self.patient_id = resolved_patient_id
         self.device_id = device_id
         self.window_size = window_size
         self.step_size = step_size
@@ -151,6 +178,20 @@ class EdgeInferenceRunner:
 
         # Modules
         self.db = DatabaseManager(db_path) if db_path else DatabaseManager()
+
+        # Validate that configured patient exists in the patient registry (fail loudly)
+        if not self.db.patient_exists(self.patient_id):
+            raise RuntimeError(
+                f"FATAL: Configured patient '{self.patient_id}' does not exist in the database. "
+                f"A clinician must create this patient record via the dashboard before edge acquisition can start."
+            )
+        # Skin-contact and signal-quality gates. Below these the window is
+        # reported as invalid rather than being turned into a vital sign.
+        # MAX30102 IR counts sit in the low thousands with no tissue present and
+        # rise well above 50,000 on contact.
+        self.contact_ir_threshold = float(os.environ.get("CONTACT_IR_THRESHOLD", "50000"))
+        self.min_sqi_score = float(os.environ.get("MIN_SQI_SCORE", "0.7"))
+
         self.bp_filter = ButterBandpassFilter(lowcut=0.5, highcut=5.0, fs=100.0, order=4)
         self.sqi_assessor = SignalQualityAssessor()
         self.peak_detector = ElgendiPeakDetector(fs=100.0)
@@ -254,11 +295,75 @@ class EdgeInferenceRunner:
         # 2. Signal Quality Index (SQI)
         sqi_res = self.sqi_assessor.compute_metrics(raw_ir, filtered)
 
+        # 2b. Skin-contact gate.
+        #
+        # The MAX30102 always returns samples, so an absent finger produces
+        # low-amplitude ambient noise rather than silence. Without this gate the
+        # bandpass filter and peak detector happily "find" a pulse in that noise
+        # and the pipeline reports a clinically plausible heart rate for a
+        # patient who is not wearing the device. IR counts below the sensor's
+        # contact threshold mean no tissue is present, so nothing downstream of
+        # here is meaningful.
+        median_ir = float(np.median(raw_ir)) if len(raw_ir) else 0.0
+        contact = median_ir >= self.contact_ir_threshold
+        quality_ok = bool(sqi_res.get("sqi_score", 0.0) >= self.min_sqi_score)
+
+        if not contact or not quality_ok:
+            reason = "no_skin_contact" if not contact else "low_signal_quality"
+            telemetry_payload = {
+                "ts": ts_latest,
+                "iso_time": datetime.now(timezone.utc).isoformat(),
+                "patient_id": self.patient_id,
+                "device_id": self.device_id,
+                "measurement_valid": False,
+                "invalid_reason": reason,
+                "median_ir": round(median_ir, 1),
+                # No BPM, no AF probability and no Grad-CAM are reported for an
+                # invalid window. Emitting placeholders here is what produced
+                # fabricated vitals previously.
+                "bpm": None,
+                "af_detected": None,
+                "af_probability": None,
+                "sqi": sqi_res,
+                # No waveform is published for an invalid window: the frontend draws
+                # whatever arrives here, and filtered ambient noise looks like a
+                # live trace to a clinician even with nothing on the sensor.
+                "raw_window": [],
+                "gradcam_weights": [],
+                "event_id": None,
+            }
+            self.broadcast_telemetry(telemetry_payload)
+            return telemetry_payload
+
         # 3. Peak Detection & Real-Time BPM
         peak_res = self.peak_detector.analyze_intervals(
             self.peak_detector.detect_peaks(filtered)
         )
-        current_bpm = peak_res["bpm"] if peak_res["bpm"] > 0 else 72.0
+        # If no pulse can be resolved from a contacted, good-quality window, report
+        # that honestly as None rather than substituting a default heart rate.
+        current_bpm = peak_res["bpm"] if peak_res["bpm"] > 0 else None
+        if current_bpm is None:
+            telemetry_payload = {
+                "ts": ts_latest,
+                "iso_time": datetime.now(timezone.utc).isoformat(),
+                "patient_id": self.patient_id,
+                "device_id": self.device_id,
+                "measurement_valid": False,
+                "invalid_reason": "no_pulse_detected",
+                "median_ir": round(median_ir, 1),
+                "bpm": None,
+                "af_detected": None,
+                "af_probability": None,
+                "sqi": sqi_res,
+                # No waveform is published for an invalid window: the frontend draws
+                # whatever arrives here, and filtered ambient noise looks like a
+                # live trace to a clinician even with nothing on the sensor.
+                "raw_window": [],
+                "gradcam_weights": [],
+                "event_id": None,
+            }
+            self.broadcast_telemetry(telemetry_payload)
+            return telemetry_payload
 
         # 4. 1D-CNN Inference & 1D Grad-CAM Explainability
         t_ml_start = time.perf_counter_ns()
@@ -350,9 +455,7 @@ class EdgeInferenceRunner:
             sample = gen.next_sample()
             res = self.ingest_sample(sample["timestamp_ms"], sample["ir_raw"], sample["red_raw"])
             if res:
-                print(f"[Edge Window] Mode={current_mode.upper()} | BPM={res['bpm']} | "
-                      f"AF_Prob={res['af_probability']:.2%} | AF={res['af_detected']} | "
-                      f"SQI={res['sqi']['sqi_score']} | Infer={res['latencies']['inference_ms']}ms (<25ms: {res['latencies']['budget_met']})")
+                print(f"[Edge Window] Mode={current_mode.upper()} | {format_window_summary(res)}")
 
             sleep_time = next_tick - time.time()
             if sleep_time > 0:
@@ -435,9 +538,8 @@ class EdgeInferenceRunner:
                                 frame["red_raw"]
                             )
                             if res:
-                                print(f"[Edge Window] Source=SERIAL | Frames={frames_received} | BPM={res['bpm']} | "
-                                      f"AF_Prob={res['af_probability']:.2%} | AF={res['af_detected']} | "
-                                      f"SQI={res['sqi']['sqi_score']} | Infer={res['latencies']['inference_ms']}ms (<25ms: {res['latencies']['budget_met']})", flush=True)
+                                print(f"[Edge Window] Source=SERIAL | Frames={frames_received} | "
+                                      f"{format_window_summary(res)}", flush=True)
             except (serial.SerialException, OSError, IOError) as err:
                 print(f"[Edge Runner] Serial disconnect or error on {target_port}: {err}. Retrying in 2s...", flush=True)
                 time.sleep(2.0)
@@ -449,7 +551,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=str, default=None, help="Serial port to connect to (e.g. /dev/ttyUSB0, /dev/ttyACM0). Auto-detected if not specified.")
     parser.add_argument("--baud", type=int, default=115200, help="Serial baud rate (default: 115200)")
     parser.add_argument("--duration", type=int, default=None, help="Execution duration in seconds (default: indefinite for serial, 30s for simulation)")
-    parser.add_argument("--patient", type=str, default="PAT-CAL-001", help="Patient ID")
+    parser.add_argument("--patient", type=str, default=None, help="Target patient ID (or TARGET_PATIENT_ID env var)")
     parser.add_argument("--device", type=str, default="ESP32C3-NODE-01", help="Device ID")
     parser.add_argument("--prefill", action="store_true", default=False, help="Prefill initial window for instant emission")
     args = parser.parse_args()

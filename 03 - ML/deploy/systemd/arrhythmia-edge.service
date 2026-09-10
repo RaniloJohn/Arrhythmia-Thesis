@@ -1,6 +1,12 @@
 [Unit]
 Description=Arrhythmia Edge Inference & Serial Acquisition Service
 After=network.target arrhythmia-website.service
+# Soft dependency, ordering only. The edge pipeline must still run when the
+# dashboard is down — offline capability is a core requirement — so this is
+# deliberately Wants= rather than Requires=. runner.py falls back from the TCP
+# bridge to an HTTP POST and reconnects on its own, so a late-starting website
+# is recovered from rather than fatal; the ordering just avoids dropping the
+# first windows at boot.
 Wants=arrhythmia-website.service
 
 [Service]
@@ -10,7 +16,13 @@ WorkingDirectory=/home/ranilo/Arrhythmia Thesis/03 - ML
 ExecStart=/usr/bin/python3 edge_inference/runner.py
 Restart=on-failure
 RestartSec=3
-Environment=PYTHONUNBUFFERED=1
+
+# TARGET_PATIENT_ID is mandatory: runner.py refuses to start if it is unset or
+# names a patient that does not exist in the registry. It lives in a 0600 file
+# on the Pi rather than here, so the deployed target can be changed without a
+# repository commit:
+#   /home/ranilo/.config/arrhythmia/edge.env
+EnvironmentFile=/home/ranilo/.config/arrhythmia/edge.env
 
 [Install]
 WantedBy=multi-user.target

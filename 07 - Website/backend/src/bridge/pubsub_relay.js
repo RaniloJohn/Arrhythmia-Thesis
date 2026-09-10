@@ -192,9 +192,23 @@ class PubSubRelay {
     this.stats.lastFrameTs = bridgeRecvTime;
     this.stats.latestPayload = payload;
 
-    // Calculate transit latency between edge window generation and bridge reception
-    const edgeTs = payload.ts || bridgeRecvTime;
-    const bridgeTransitMs = Math.max(0, bridgeRecvTime - edgeTs);
+    // Calculate transit latency between edge window generation and bridge reception.
+    //
+    // NOTE: payload.ts is the ESP32-C3's monotonic uptime in ms (millis()), NOT a
+    // Unix epoch. Subtracting it from Date.now() yields a ~1.79e12 ms "latency"
+    // (~56 years), which was previously stamped into every outbound WebSocket
+    // message as transitLatencyMs and reported as the ISO/IEC 25010
+    // sensor-to-browser figure. Use the edge runner's iso_time instead, which is
+    // wall-clock UTC generated on this same host.
+    const edgeEpochMs = payload.iso_time ? Date.parse(payload.iso_time) : NaN;
+    let bridgeTransitMs = Number.isFinite(edgeEpochMs)
+      ? bridgeRecvTime - edgeEpochMs
+      : 0;
+    // Reject implausible values (clock skew, malformed payload) rather than
+    // letting them poison the moving average.
+    if (!Number.isFinite(bridgeTransitMs) || bridgeTransitMs < 0 || bridgeTransitMs > 60000) {
+      bridgeTransitMs = 0;
+    }
     this.stats.avgBridgeLatencyMs = this.stats.avgBridgeLatencyMs === 0
       ? bridgeTransitMs
       : Math.round((this.stats.avgBridgeLatencyMs * 0.9 + bridgeTransitMs * 0.1) * 10) / 10;
@@ -228,10 +242,15 @@ class PubSubRelay {
    * Standalone Simulation Generator (for bench testing without physical Pi/ESP32).
    * Produces realistic 1-second stepped windows (250 display points, 100Hz equivalent).
    */
-  startSimulation(patientId = 'PAT-CAL-001') {
-    if (this.simRunning) return;
+  startSimulation(patientId = 'SIM-BENCH-001') {
+    const targetPatient = patientId || 'SIM-BENCH-001';
+    if (!config.ENABLE_SIMULATION) {
+      console.warn('[Simulator] Rejected startSimulation: ENABLE_SIMULATION is disabled in config.');
+      return false;
+    }
+    if (this.simRunning) return true;
     this.simRunning = true;
-    console.log(`[Simulator] Starting standalone physiological stream simulation for ${patientId}...`);
+    console.log(`[Simulator] Starting standalone physiological stream simulation for ${targetPatient}...`);
 
     let t = 0;
     let mode = 'nsr'; // Alternates between 'nsr' and 'af'
@@ -295,8 +314,9 @@ class PubSubRelay {
       const payload = {
         ts: Date.now(),
         iso_time: new Date().toISOString(),
-        patient_id: patientId,
-        device_id: 'ESP32C3-NODE-01',
+        patient_id: targetPatient,
+        device_id: 'SIMULATOR-BENCH',
+        is_simulated: true,
         bpm,
         af_detected: isAf ? 1 : 0,
         af_probability: isAf ? Math.round((0.88 + Math.random() * 0.09) * 10000) / 10000 : Math.round((0.02 + Math.random() * 0.05) * 10000) / 10000,

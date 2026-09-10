@@ -69,8 +69,22 @@ class WaveformVisualizer {
    * @param {Array<number>} rawWindow - Array of filtered pulsatile PPG points
    * @param {Array<number>} gradcamWeights - Array of Grad-CAM relevance scores [0.0 - 1.0]
    */
+  /**
+   * Blanks the trace and heat strip, leaving only the grid. Used when the edge
+   * reports no valid measurement — returning early instead would leave the last
+   * good waveform frozen on screen, which reads as a live signal.
+   */
+  clear() {
+    this.points = [];
+    this.weights = [];
+    this.render();
+  }
+
   updateData(rawWindow, gradcamWeights) {
-    if (!Array.isArray(rawWindow) || rawWindow.length === 0) return;
+    if (!Array.isArray(rawWindow) || rawWindow.length === 0) {
+      this.clear();
+      return;
+    }
 
     this.points = rawWindow;
     this.weights = gradcamWeights || new Array(rawWindow.length).fill(0.1);

@@ -7,6 +7,12 @@ const { spawn } = require('child_process');
 const path = require('path');
 const { WebSocket } = require('ws');
 const jwt = require('jsonwebtoken');
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-minimum-32-chars-key-thesis';
+process.env.ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'ue_thesis_2026';
+process.env.ENABLE_SIMULATION = 'true';
+
 const config = require('../src/config');
 const db = require('../src/db');
 const { server } = require('../src/server');

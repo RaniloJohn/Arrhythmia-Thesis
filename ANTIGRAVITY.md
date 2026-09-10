@@ -118,13 +118,14 @@ When implementing code in `03 - ML/`, strictly adhere to these verified engineer
 
 ### 4.1. Hardware & Acquisition Tier
 - **Sensors:** MAX30102 PPG Optical Biosensor (Red LED: 660 nm, IR LED: 940 nm).
-- **Sampling Frequency:** Configured to 100 Hz or 200 Hz via I2C (`Wire.h`).
-- **MCU:** ESP32-C3 (RISC-V single-core, 3.3V logic, native USB-C, I2C on GPIO 8/9 or configured pins).
-- **Local Display:** SSD1306 0.96" OLED (128x64, I2C address `0x3C`) displaying real-time heart rate (BPM) and immediate AF alert indicator.
-- **Firmware Responsibilities (`03 - ML/firmware/`):**
-  - High-frequency sampling with circular buffer.
-  - Basic DC tracking / baseline subtraction.
-  - Packetization and serial/UART/BLE transfer to Raspberry Pi 4.
+- **Sampling Frequency:** Configured to 100 Hz deterministic cadence (10,000 us period) via I2C (`Wire.h` on GPIO 8 SDA, GPIO 9 SCL).
+- **MCU:** ESP32-C3 (RISC-V single-core @ 160 MHz, 3.3V logic, native USB-C).
+- **Local Display:** SSD1306 0.96" OLED (128x64, I2C address `0x3C`) displaying real-time heart rate (BPM) and local heuristic AF irregularity indicator.
+- **Firmware Architecture (ADR-002 Dual-Toolchain):**
+  - **PlatformIO (`03 - ML/firmware/src/main.cpp`):** Headless CI and automated verification.
+  - **Arduino IDE (`03 - ML/firmware/arduino/ArrhythmiaNode/ArrhythmiaNode.ino`):** Bench flashing and student lab development.
+  - **Binary Wire Contract:** 19-byte packed frame (`0xAA`/`0x55` delimiters, CRC-16-CCITT over 15-byte payload) streamed at 115200 baud over native USB CDC.
+  - **Critical Toolchain Setting:** Arduino IDE -> `Tools -> USB CDC On Boot -> Enabled` is mandatory to route USB serial traffic to `/dev/ttyACM0` on the Raspberry Pi.
 
 ### 4.2. Signal Preprocessing & DSP Engine (`03 - ML/signal-processing/`)
 - **Bandpass Filter:** 4th-order zero-phase Butterworth filter (0.5 Hz – 5.0 Hz cutoff) to eliminate baseline wander (<0.5 Hz) and high-frequency motion/electromechanical noise (>5.0 Hz).

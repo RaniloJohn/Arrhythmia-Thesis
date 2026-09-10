@@ -155,7 +155,7 @@ class ApiClient {
     return this.request('/edge/bridge/status', { method: 'GET' });
   }
 
-  async toggleSimulation(enable, patientId = 'PAT-CAL-001') {
+  async toggleSimulation(enable, patientId = 'SIM-BENCH-001') {
     return this.request('/edge/simulation/toggle', {
       method: 'POST',
       body: JSON.stringify({ enable, patientId })

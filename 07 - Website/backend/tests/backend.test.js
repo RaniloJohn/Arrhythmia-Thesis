@@ -7,7 +7,15 @@
  *  - Reliability: SHA-256 hash-chain continuity under concurrent queries
  */
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-3cpe2a-verification-token';
+process.env.ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+process.env.ENABLE_SIMULATION = '1';
+process.env.PORT = process.env.TEST_PORT || '8088';
+process.env.TCP_BRIDGE_PORT = process.env.TEST_TCP_BRIDGE_PORT || '5058';
+
 const http = require('http');
+const bcrypt = require('bcryptjs');
 const { WebSocket } = require('ws');
 const { app, server } = require('../src/server');
 const config = require('../src/config');
@@ -77,6 +85,16 @@ async function runTests() {
     // TEST 2: Clinician Authentication (PLAN §3)
     // -------------------------------------------------------------
     console.log('\n--- Phase 2: Clinician Auth & RBAC (PLAN §3) ---');
+
+    // Ensure test credentials exist in test environment
+    if (!db.getUserByUsername('admin')) {
+      const salt = bcrypt.genSaltSync(12);
+      db.createUser('usr-admin-test', 'admin', bcrypt.hashSync('admin123', salt), 'admin', 'System Administrator');
+    }
+    if (!db.getUserByUsername('clinician')) {
+      const salt = bcrypt.genSaltSync(12);
+      db.createUser('usr-clin-test', 'clinician', bcrypt.hashSync('clinician123', salt), 'clinician', 'Dr. Maria Santos, MD');
+    }
     
     // 2.1 Invalid login attempt
     const badLogin = await httpRequest({
@@ -137,7 +155,7 @@ async function runTests() {
     // -------------------------------------------------------------
     console.log('\n--- Phase 3: Patient Data Management CRUD (PLAN §1) ---');
     
-    // 3.1 List Seed Patients
+    // 3.1 List Patients
     const listPatients = await httpRequest({
       hostname: '127.0.0.1',
       port: config.PORT,
@@ -146,7 +164,8 @@ async function runTests() {
       headers: { 'Authorization': `Bearer ${clinicianToken}` }
     });
     assert(listPatients.status === 200, 'GET /api/patients succeeds with auth');
-    assert(listPatients.body.count >= 3, `Patient count >= 3 (Found: ${listPatients.body.count})`);
+    assert(Array.isArray(listPatients.body.patients), 'Patients result is an array');
+    const prevPatientCount = listPatients.body.count || 0;
 
     // 3.2 Create New Patient
     const createRes = await httpRequest({
