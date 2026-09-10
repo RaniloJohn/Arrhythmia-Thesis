@@ -13,6 +13,9 @@ reproduce behaviour, and never report Windows-side timings as if they described 
 deployment.
 
 - Host `raspberrypi` / `100.77.17.38`, user `ranilo`, path `/home/ranilo/Arrhythmia Thesis/`
+- **Credentials are in `CREDENTIALS.md` in this folder, which is gitignored.** It is
+  not committed and does not appear in the repository — open it locally when you need
+  a login. Never copy a credential from it into this file or any other tracked file.
 - Dashboard: `http://100.77.17.38:8080` (use **Firefox** on the Pi — Chromium there
   cannot load any URL at all, including `example.com`; that is a browser fault, not a
   website fault)
@@ -20,6 +23,7 @@ deployment.
   `arrhythmia-edge.service` and `arrhythmia-website.service`
 - Firmware is compiled and flashed **remotely** with `arduino-cli` on the Pi — no
   physical access is required for firmware iteration
+- You are able to get to sudo, so no worries. just use the credentials provided.
 
 **Full deployment architecture, wire protocol, flashing procedure, validity-gating
 contract, and the current list of what is broken:**
