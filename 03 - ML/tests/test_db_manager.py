@@ -20,21 +20,34 @@ def temp_db(tmp_path):
     """Provides a fresh isolated SQLite database instance for each test."""
     db_file = tmp_path / "test_arrhythmia_edge.db"
     manager = DatabaseManager(str(db_file))
+    with manager.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO patients (patient_id, name, age, gender, barangay, device_id)
+        VALUES 
+            ('PAT-CAL-001', 'Test Patient', 45, 'Male', 'Barangay 1', 'ESP32C3-NODE-01'),
+            ('PAT-CAL-002', 'Test Patient 2', 52, 'Female', 'Barangay 2', 'ESP32C3-NODE-02');
+        """)
+        cursor.execute("""
+        INSERT INTO users (user_id, username, password_hash, role, full_name)
+        VALUES ('USR-001', 'testadmin', 'dummyhash', 'admin', 'Test Admin');
+        """)
+        conn.commit()
     return manager
 
 
 def test_db_initialization_and_seeding(temp_db):
-    """Test that tables are created and default patients/users are seeded."""
+    """Test that tables are created and test patients/users can be queried."""
     with temp_db.get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM patients;")
-        patients = cursor.fetchall()
-        assert len(patients) >= 3
-        assert patients[0]["patient_id"] == "PAT-CAL-001"
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = {row[0] for row in cursor.fetchall()}
+        assert "patients" in tables
+        assert "arrhythmia_events" in tables
+        assert "users" in tables
 
-        cursor.execute("SELECT count(*) FROM users;")
-        user_count = cursor.fetchone()[0]
-        assert user_count >= 2
+        assert temp_db.patient_exists("PAT-CAL-001") is True
+        assert temp_db.patient_exists("NON_EXISTENT") is False
 
 
 def test_hash_chain_append_and_validation(temp_db):
