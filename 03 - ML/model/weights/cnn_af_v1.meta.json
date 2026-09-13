@@ -1,0 +1,82 @@
+{
+  "git_commit": "b912314af380cc017173d1043544bafabd376034",
+  "training_date": "2026-09-13T20:54:31.197280",
+  "training_dataset": {
+    "name": "deepbeat",
+    "source": "syn21985690",
+    "subjects_used": [
+      "147",
+      "150",
+      "152",
+      "153"
+    ],
+    "window_count": 21938
+  },
+  "external_validation_dataset": {
+    "name": "mimic_perform_af",
+    "version": "1.0",
+    "source": "Zenodo doi:10.5281/zenodo.15906524",
+    "citation": "Charlton et al. (2022), Physiol. Meas. 43:115003"
+  },
+  "split_manifest_hashes": {
+    "deepbeat_split_manifest": "55ec0446d8a1b779aa719d59a15d04a751ece29f81016e1a29e0ad999b0a7b1d",
+    "mimic_split_manifest": "a931662b4faaab03ce4b3ac84d2e262d3a122bca97b547d9338b92e402cd8b67"
+  },
+  "threshold": 0.37,
+  "metrics": {
+    "best_epoch": 1,
+    "best_val_auroc": 0.6345731384278286,
+    "val_metrics": {
+      "loss": 0.707548499324105,
+      "auroc": 0.6345731384278286,
+      "auprc": 0.8106526730213086,
+      "sensitivity": 0.44580696202531644,
+      "specificity": 0.7868752539618041,
+      "tp": 5635,
+      "fp": 1049,
+      "tn": 3873,
+      "fn": 7005
+    },
+    "train_loss": 0.5534813484019511,
+    "total_wall_clock_s": 201.91,
+    "device": "cpu",
+    "seed": 42,
+    "training_windows": 21938,
+    "validation_windows": 17562
+  },
+  "input_contract": {
+    "fs": 100.0,
+    "window_samples": 1000,
+    "window_duration_s": 10.0,
+    "preprocessing_chain": [
+      "detrend_ppg",
+      "ButterBandpassFilter(lowcut=0.5, highcut=5.0, fs=100.0, order=4)",
+      "zscore_normalize"
+    ],
+    "runtime_engine": "inference_model.py (pure NumPy)",
+    "flatten_order": "time_major (t * 64 + c)"
+  },
+  "decision_threshold": 0.37,
+  "calibration": {
+    "criterion": "Youden_J",
+    "brier_score": 0.232555,
+    "brier_skill_score": -3.9523,
+    "expected_calibration_error": 0.424,
+    "maximum_calibration_error": 0.4825,
+    "calibration_assessment": "POORLY_CALIBRATED",
+    "val_metrics_at_threshold": {
+      "threshold": 0.37,
+      "sensitivity": 0.9528,
+      "specificity": 0.1052,
+      "ppv": 0.0524,
+      "npv": 0.9772,
+      "youden_j": 0.058,
+      "f1": 0.0994,
+      "tp": 12044,
+      "fp": 217650,
+      "tn": 25584,
+      "fn": 596
+    },
+    "post_hoc_scaling_note": "Platt scaling (logistic sigmoid calibration) or isotonic regression flagged for future edge runtime implementation if probability scores require post-hoc adjustment."
+  }
+}

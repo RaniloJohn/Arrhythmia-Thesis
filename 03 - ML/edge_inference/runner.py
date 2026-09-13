@@ -21,8 +21,9 @@ import socket
 import glob
 import argparse
 import numpy as np
+from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 
 try:
     import serial
@@ -141,7 +142,8 @@ class EdgeInferenceRunner:
                  window_size: int = 1000,
                  step_size: int = 100,  # 1-second step @ 100Hz
                  dashboard_port: int = 5051,
-                 http_ingest_url: Optional[str] = None):
+                 http_ingest_url: Optional[str] = None,
+                 weights_path: Optional[Union[str, Path]] = None):
         self.patient_id = patient_id
         self.device_id = device_id
         self.window_size = window_size
@@ -155,7 +157,44 @@ class EdgeInferenceRunner:
         self.sqi_assessor = SignalQualityAssessor()
         self.peak_detector = ElgendiPeakDetector(fs=100.0)
         self.model = Arrhythmia1DCNN(input_length=window_size)
+
+        # Resolve weights path: explicit argument -> env var ARRHYTHMIA_WEIGHTS -> default file
+        resolved_weights: Optional[Path] = None
+        if weights_path is not None:
+            w_path = Path(weights_path)
+            if not w_path.exists():
+                raise FileNotFoundError(f"Explicitly specified weights file not found: {w_path.resolve()}")
+            resolved_weights = w_path
+        elif "ARRHYTHMIA_WEIGHTS" in os.environ and os.environ["ARRHYTHMIA_WEIGHTS"].strip():
+            env_w = Path(os.environ["ARRHYTHMIA_WEIGHTS"].strip())
+            if env_w.exists():
+                resolved_weights = env_w
+            else:
+                print(f"[Edge Runner WARNING] ARRHYTHMIA_WEIGHTS set to '{env_w}' but file does not exist.")
+
+        if resolved_weights is None:
+            default_weights = Path(__file__).resolve().parent.parent / "model" / "weights" / "cnn_af_v1.npz"
+            if default_weights.exists():
+                resolved_weights = default_weights
+
+        if resolved_weights is not None and resolved_weights.exists():
+            self.model.load_weights(resolved_weights)
+            print(f"[Edge Runner] Successfully loaded trained weights from: {resolved_weights.resolve()}")
+            print(f"[Edge Runner] Model operational status: WEIGHTS_LOADED | Calibrated threshold: {self.model.threshold:.4f} (source: {self.model.weights_source})")
+        else:
+            print("\n" + "!" * 78)
+            print("[Edge Runner WARNING] NO TRAINED WEIGHTS FILE FOUND!")
+            print("[Edge Runner WARNING] Running on UNTRAINED random He-init weights.")
+            print("[Edge Runner WARNING] Model predictions are for demo purposes and NOT clinically valid.")
+            print("[Edge Runner WARNING] Specify weights via --weights <path> or ARRHYTHMIA_WEIGHTS env var.")
+            print("!" * 78 + "\n")
+
         self.grad_cam = GradCAM1D(self.model)
+
+        # Consensus tracking buffer (rolling window of 5 decisions for temporal stability)
+        self.decision_history: List[int] = []
+        self.consensus_window_size: int = 5
+        self.consensus_k: int = 3  # 3 out of 5 majority
 
         # Buffers
         self.raw_ir_buffer: List[int] = []
@@ -270,6 +309,12 @@ class EdgeInferenceRunner:
         af_detected = gradcam_res["af_detected"]
         gradcam_weights = gradcam_res["weights"]
 
+        # Update rolling decision history for temporal consensus
+        self.decision_history.append(int(af_detected))
+        if len(self.decision_history) > self.consensus_window_size:
+            self.decision_history.pop(0)
+        consensus_af = int(sum(self.decision_history) >= self.consensus_k) if len(self.decision_history) >= self.consensus_k else int(af_detected)
+
         # 5. Cryptographic Hash Chaining Persistence (if AF detected or periodic anchor)
         db_event_id = None
         if af_detected:
@@ -300,7 +345,13 @@ class EdgeInferenceRunner:
             "device_id": self.device_id,
             "bpm": round(current_bpm, 1),
             "af_detected": int(af_detected),
+            "af_consensus": consensus_af,
             "af_probability": round(af_prob, 4),
+            "weights_loaded": bool(self.model.weights_loaded),
+            "model_trained": bool(self.model.weights_loaded),
+            "model_version": getattr(self.model, "model_version", "unknown"),
+            "training_dataset": getattr(self.model, "training_dataset", "unknown"),
+            "decision_threshold": round(float(self.model.threshold), 4),
             "sqi": sqi_res,
             "hrv": {
                 "rmssd_ms": peak_res["rmssd_ms"],
@@ -452,9 +503,14 @@ if __name__ == "__main__":
     parser.add_argument("--patient", type=str, default="PAT-CAL-001", help="Patient ID")
     parser.add_argument("--device", type=str, default="ESP32C3-NODE-01", help="Device ID")
     parser.add_argument("--prefill", action="store_true", default=False, help="Prefill initial window for instant emission")
+    parser.add_argument("--weights", type=str, default=None, help="Path to trained model weights .npz file (default: 03 - ML/model/weights/cnn_af_v1.npz)")
     args = parser.parse_args()
 
-    runner = EdgeInferenceRunner(patient_id=args.patient, device_id=args.device)
+    runner = EdgeInferenceRunner(
+        patient_id=args.patient,
+        device_id=args.device,
+        weights_path=args.weights,
+    )
     try:
         if args.simulate:
             sim_duration = args.duration if args.duration is not None else 30

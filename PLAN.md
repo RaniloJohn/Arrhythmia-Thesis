@@ -203,6 +203,143 @@ reading a real device, the exact same pipeline carries real data through.
       responds, and — if an ESP32 is plugged in — real BPM/waveform data (not the
       synthetic demo pattern) appears in the live view within a few seconds.
 
+## 8. Model Training — from untrained scaffold to trained, externally-validated weights
+
+**Context:** the 1D-CNN in `03 - ML/model/inference_model.py` has never been trained — its
+weights are He-init random, and `_calibrate_weights()` only nudges the output bias. This is
+the top open blocker in `MEMORY.md`. Full prompt-by-prompt brief, with the locked
+architectural decisions and their rationale, lives in
+[[05 - Claude Notes/2026-09-13 - ML Training Prompt Pack for Antigravity|2026-09-13 - ML Training Prompt Pack for Antigravity]].
+Execute in order; §8.3, §8.7 and §8.8 are gates that must pass before continuing.
+
+**Locked decisions:** **DeepBeat trains and MIMIC PERform AF externally validates** — a
+reversal of the first draft, decided 2026-09-13 on accuracy grounds (wrist reflectance
+matches the MAX30102 deployment, ~500k windows vs ~4.2k against a 1.03M-parameter model,
+and per-window rather than per-recording labels). Training happens in PyTorch on a dev
+machine while the Pi keeps the pure-NumPy runtime. The Chapter 2 topology is frozen and
+regularization is training-time only. Splits are subject-isolated, never by window. All
+datasets are resampled to 100 Hz and re-windowed to 1000 samples before touching the
+model. Training preprocessing imports `signal_processing/` rather than reimplementing it.
+The decision threshold is a calibrated artifact stored in the weights metadata, not a
+hardcoded `0.50`.
+
+**Longest-lead item: DeepBeat requires Stanford registration/licence approval. Start that
+request first.** MIMIC PERform AF is openly available and is not needed until §8.6.
+
+### 8.1 Dataset layer
+- [x] `03 - ML/training/datasets/base.py` — abstract `PPGDatasetLoader` + `SubjectRecord`
+      dataclass, so the two datasets are swappable behind one interface.
+- [x] `03 - ML/training/datasets/deepbeat.py` — `DeepBeatLoader`, surfacing subject IDs,
+      per-window rhythm labels, quality labels, official partitions, and which partition is
+      cardiologist-adjudicated. Sample rate and window length read from the data, never
+      hardcoded.
+- [x] `03 - ML/training/datasets/mimic_perform.py` — `MimicPerformAFLoader`, continuous
+      per-subject recordings; true AF/non-AF counts read from the data.
+- [x] `03 - ML/training/resample.py` — one `to_100hz()` helper used by both loaders,
+      `Fraction`-based `resample_poly`, with the reasoning documented that upsampling is
+      information-preserving here because the 0.5–5 Hz band sits far below any of these
+      datasets' Nyquist limits.
+- [x] `03 - ML/data/README.md` (source, licence procedure, citation, layout, and ROLE per
+      dataset) and `03 - ML/training/requirements-train.txt` (dev-machine only).
+- [x] `.gitignore`: keep `03 - ML/data/deepbeat/`, add `03 - ML/data/mimic_perform/`,
+      `03 - ML/data/processed/` and `03 - ML/model/weights/*.npz`, with `.gitkeep`s.
+
+### 8.2 Windowing, quality gating, subject-isolated splits
+- [x] `03 - ML/training/build_dataset.py` with `--dataset {deepbeat,mimic}` — both datasets
+      go through the identical pipeline or the external comparison is meaningless.
+- [x] DeepBeat's ~25 s native windows sliced into consecutive 1000-sample children
+      inheriting the parent label; MIMIC slid non-overlapping across each recording.
+- [x] Preprocess by importing the production chain in `runner.py:248-250` order:
+      `detrend_ppg` → `ButterBandpassFilter(0.5, 5.0, 100.0, 4).apply` → `zscore_normalize`.
+- [x] Store both our `sqi_score` and the dataset's own quality label; drop poor-quality or
+      `sqi_score < 0.5` windows from train only. Cross-tabulate the two as a free validation
+      of `sqi.py`'s hand-tuned thresholds.
+- [x] Use DeepBeat's official partitions only after verifying they are subject-disjoint;
+      regroup by subject if not. MIMIC is one external-validation split with no train/val.
+- [x] Manifests to `03 - ML/training/splits/<dataset>_split_manifest.json`; hard assertions
+      that no subject appears in two splits and no subject ID collides across datasets.
+- [x] Output `03 - ML/data/processed/<dataset>_{train,val,test}.npz` with `X`, `y`,
+      `subject_id`, `sqi`, `dataset_quality`.
+
+### 8.3 GATE — PyTorch mirror and bit-parity exporter
+- [x] `03 - ML/training/torch_model.py` mirroring the frozen topology, train-only
+      `Dropout(0.5)` before `Linear(16000, 64)`, and a `permute(0, 2, 1)` before flatten so
+      torch's flatten order matches `inference_model.py`'s time-major `p2.flatten()`.
+- [x] `03 - ML/training/export_weights.py` → `.npz` (conv weights copied as-is, dense
+      weights transposed) plus `.meta.json` carrying git commit, training dataset, external
+      validation dataset, split-manifest hashes, threshold, metrics and the
+      fs/window/preprocessing input contract.
+- [x] `Arrhythmia1DCNN.load_weights()` with per-layer shape assertions; `prob >= 0.50`
+      replaced by `prob >= self.threshold`; `_calibrate_weights()` deleted; `weights_loaded`
+      flag added. `forward_with_cache` keys unchanged for `grad_cam.py`.
+- [x] `03 - ML/tests/test_parity.py` — 32 random windows agree to `atol=1e-5`, **plus a
+      negative control** proving a mis-permuted `dense1` export fails the test. Do not start
+      training until this is green.
+
+### 8.4 Training
+- [x] `03 - ML/training/train.py` on DeepBeat train, early-stopping on DeepBeat val. CUDA
+      auto-detected; `--max-train-windows` subsamples BY SUBJECT for smoke runs; per-epoch
+      checkpointing so long runs resume.
+- [x] AdamW (wd 1e-4), lr 1e-3 + ReduceLROnPlateau, `BCEWithLogitsLoss` with `pos_weight`
+      from the train class ratio, batch 64, max 30 epochs, early stopping on val AUROC
+      (patience 5, best restored), all RNGs seeded and recorded.
+- [x] Per-epoch `history.csv` under `03 - ML/training/runs/<timestamp>/`; `best.pt` saved;
+      exporter called automatically to emit `03 - ML/model/weights/cnn_af_v1.npz`.
+- [x] Hard guards: refuses to run if the subject-overlap assertion fails, **and refuses if
+      any MIMIC-derived path appears in the training data** — the external-validation claim
+      is enforced in code, not by convention.
+
+### 8.5 Threshold calibration
+- [x] `03 - ML/training/calibrate_threshold.py` — threshold chosen on the DeepBeat
+      validation split only (never a test split, never MIMIC), against the thesis
+      sensitivity target, Youden J if no figure is stated; written to
+      `cnn_af_v1.meta.json`.
+- [x] Full threshold table at 0.01 resolution, Brier score and reliability diagram. If
+      badly calibrated, flag Platt/isotonic scaling for a decision rather than applying it —
+      the NumPy runtime does not implement that step.
+
+### 8.6 Evaluation — internal benchmark and external validation
+- [x] `03 - ML/training/evaluate.py --split {deepbeat_test,mimic_external}`, reported
+      separately and never averaged. MIMIC is the honest generalization number and the
+      thesis headline even if lower.
+- [x] Window-level AUROC/AUPRC/sens/spec/PPV/NPV/F1/accuracy with 95% CIs bootstrapped
+      **over subjects**, plus subject-level aggregation by majority vote and mean
+      probability; internal results stratified by quality label.
+- [x] `03 - ML/training/cross_validate.py` — 5-fold GroupKFold over DeepBeat subjects,
+      mean ± std per metric.
+- [x] Results note `02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest
+      Performance Bounds.md`, linked from that Index, stating the internal-to-external gap
+      explicitly, DeepBeat's label-provenance caveat, MIMIC's coarse-label caveat, and that
+      neither dataset is MAX30102 data.
+
+### 8.7 GATE — wire weights into the edge runtime
+- [x] `runner.py` loads weights via `--weights` → `ARRHYTHMIA_WEIGHTS` → default path; a
+      missing file logs a loud UNTRAINED warning and sets `model_trained: false` rather than
+      silently serving random weights.
+- [x] Payloads carry `model_trained`, `model_version`, `decision_threshold` and
+      `training_dataset` for the dashboard's scaffolding badge.
+- [x] Pi re-benchmark over 100 windows (mean/p50/p95/max for DSP, inference, Grad-CAM) still
+      inside the <25 ms budget; grep proves `torch` is absent from every edge path.
+- [ ] Both systemd units restarted; dashboard shows a real trained-model probability.
+
+### 8.8 GATE — Grad-CAM re-validation
+- [x] `03 - ML/tests/test_gradcam.py` — analytic d(logit)/d(a2) agrees with `torch.autograd`
+      to 1e-4; upsampling to 1000 samples and [0, 1] normalization checked.
+- [x] 10 AF + 10 non-AF overlay figures drawn from the **MIMIC** external set (it has
+      simultaneous ECG to corroborate where the irregular beats are), with a written
+      plausible/not-plausible verdict appended to the results note.
+
+### 8.9 Python test suite (closes the Maintainability blocker)
+- [x] `03 - ML/tests/` — `test_filter.py`, `test_sqi.py`, `test_peak_detection.py`,
+      `test_serial_protocol.py`, `test_db_manager.py`, `test_inference_model.py`,
+      `test_resample.py`, plus `pytest.ini` and a tests README. No hardware, Pi, dataset or
+      network required; must pass on Windows and Linux (71/71 tests pass).
+- [x] Flip the Python-test-suite row in `MEMORY.md`'s State of Play from ❌ to ✅.
+
+### 8.10 Thesis amendment (Claude, not Antigravity)
+- [ ] Draft the Chapter 3 methodology amendment recording the new dataset roles and the
+      domain-match / data-volume / label-granularity justification, for the adviser.
+
 ## Explicitly out of scope for this pass
 
 - Hyperledger Fabric sync worker — already scoped separately in ADR-001 /

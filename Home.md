@@ -20,6 +20,12 @@ The project runs an automated pair-programming pipeline via `orchestrate.bat`:
 - **Antigravity (Gemini):** Software Engineer Architect, software topology, interface contracts, ADRs, edge implementation, and ISO/IEC 25010 benchmarking.
 - **Obsidian Vault:** Shared database, epistemic knowledge check, and persistent memory for both agents.
 
+## Start here (agents)
+
+- [[MEMORY|MEMORY.md]] — the AI session memory: state of play, settled decisions, open
+  blockers, routing table, and session log. Both agents read this first each session so
+  they don't have to re-crawl the vault.
+
 ## Sections
 
 - [[01 - Literature/Index|Literature]] — notes on papers and sources read for the study (140+ Zotero sources)

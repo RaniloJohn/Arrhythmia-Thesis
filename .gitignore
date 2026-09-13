@@ -14,15 +14,25 @@ venv/
 03 - ML/storage/*.db-shm
 03 - ML/storage/*.db-wal
 
-# Large ML datasets / trained weights - too large for git, fetch separately
-03 - ML/data/deepbeat/*.npz
-03 - ML/data/deepbeat/*.h5
-03 - ML/data/deepbeat/Dataset.zip
-03 - ML/data/deepbeat/download.log
+# Large ML datasets / trained weights - raw data too large for git
+03 - ML/data/deepbeat/*
+!03 - ML/data/deepbeat/.gitkeep
+!03 - ML/data/deepbeat/metadata.json
+03 - ML/data/mimic_perform/*
+!03 - ML/data/mimic_perform/.gitkeep
+03 - ML/data/processed/*
+!03 - ML/data/processed/.gitkeep
+03 - ML/model/weights/*.npz
+!03 - ML/model/weights/cnn_af_v1.npz
+!03 - ML/model/weights/.gitkeep
 
-# Obsidian local workspace state (machine-specific, not shared config)
+# Training checkpoints (optimizer states & intermediate weights)
+03 - ML/training/runs/**/*.pt
+
+# Obsidian local workspace state & nested vault
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
+Vault/
 
 # Env / secrets
 .env

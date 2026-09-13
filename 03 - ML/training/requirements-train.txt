@@ -1,0 +1,18 @@
+# ML Model Training Dependencies (DEV-MACHINE ONLY)
+# ===================================================
+# These dependencies are strictly for offline model training, dataset preprocessing,
+# and external validation on developer workstations.
+#
+# CRITICAL CONSTRAINT:
+# Never import these packages under runtime edge packages:
+#   - 03 - ML/edge_inference/
+#   - 03 - ML/model/ (pure-NumPy inference runtime)
+#   - 03 - ML/signal_processing/
+#   - 03 - ML/storage/
+#
+# Pinned versions compatible with Python 3.14 on Windows x86_64:
+numpy==2.4.6
+scipy==1.18.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+torch==2.14.0

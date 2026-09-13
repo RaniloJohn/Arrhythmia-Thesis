@@ -12,6 +12,7 @@ they're searchable in the vault instead of disappearing at the end of a chat.
 ## Notes
 
 - [[2026-09-03 - Website Tier Requirements & Firmware Gap Analysis|2026-09-03 - Website Tier Requirements & Firmware Gap Analysis]]
+- [[2026-09-13 - ML Training Prompt Pack for Antigravity|2026-09-13 - ML Training Prompt Pack for Antigravity]] — the eight-prompt sequence that takes the 1D-CNN from untrained random weights to trained, parity-verified, calibrated weights on the Pi.
 
 ---
 Back to [[../Home|Home]]

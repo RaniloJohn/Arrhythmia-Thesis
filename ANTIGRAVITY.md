@@ -88,6 +88,13 @@ The project leverages a specialized two-tier agentic architecture orchestrated v
 
 ## 3. Obsidian as Database, Review Ledger, and Knowledge Check
 
+**Session entry point:** read `MEMORY.md` (repo root) first, every session. It holds the
+verified state of play, the settled decisions that must not be relitigated, the open
+blockers, and a routing table saying which note to open for which task — so neither agent
+has to re-read the whole vault. Append to its Session Log before finishing a session that
+changed something real. This charter stays the deep reference; `MEMORY.md` is the index.
+
+
 The root directory `Arrhythmia Thesis/` is an active Obsidian vault. Both AIs must treat Obsidian as the persistent memory, structured database, and knowledge verification layer.
 
 ### Vault Conventions

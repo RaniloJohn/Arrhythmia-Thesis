@@ -1,0 +1,257 @@
+{
+  "split_key": "deepbeat_test",
+  "split_display": "DeepBeat Test (Internal Cardiologist-Adjudicated Benchmark)",
+  "evaluation_timestamp": "20260913_212328",
+  "threshold": 0.37,
+  "data_path": "C:\\Users\\adria\\Arrhythmia-Thesis\\03 - ML\\data\\processed\\deepbeat_test.npz",
+  "weights_path": "C:\\Users\\adria\\Arrhythmia-Thesis\\03 - ML\\model\\weights\\cnn_af_v1.npz",
+  "window_metrics": {
+    "auroc": 0.5345371176985599,
+    "auprc": 0.5545522355021606,
+    "sensitivity": 0.8542553191489362,
+    "specificity": 0.10883645616470045,
+    "ppv": 0.4839941066166622,
+    "npv": 0.4328426862925483,
+    "accuracy": 0.47749327721267393,
+    "f1": 0.6179035567715458,
+    "youden_j": -0.036908224686363456,
+    "brier_score": 0.26317450404167175,
+    "tp": 7227,
+    "fp": 7705,
+    "tn": 941,
+    "fn": 1233,
+    "total": 17106
+  },
+  "window_bootstrap_cis": {
+    "auroc": [
+      0.4211,
+      0.967
+    ],
+    "auprc": [
+      0.2302,
+      0.9996
+    ],
+    "sensitivity": [
+      0.7821,
+      0.9558
+    ],
+    "specificity": [
+      0.0438,
+      0.9783
+    ],
+    "ppv": [
+      0.16,
+      0.9997
+    ],
+    "npv": [
+      0.0709,
+      0.9083
+    ],
+    "accuracy": [
+      0.2183,
+      0.8886
+    ],
+    "f1": [
+      0.2736,
+      0.9405
+    ]
+  },
+  "subject_metrics": {
+    "n_subjects": 14,
+    "majority_vote": {
+      "sensitivity": 1.0,
+      "specificity": 0.75,
+      "accuracy": 0.8571,
+      "tp": 6,
+      "fp": 2,
+      "tn": 6,
+      "fn": 0,
+      "total": 14
+    },
+    "mean_probability": {
+      "sensitivity": 1.0,
+      "specificity": 0.75,
+      "accuracy": 0.8571,
+      "tp": 6,
+      "fp": 2,
+      "tn": 6,
+      "fn": 0,
+      "total": 14
+    },
+    "subject_breakdown": [
+      {
+        "subject_id": "154",
+        "true_label": 0,
+        "n_windows": 22,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.22890020906925201,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "155",
+        "true_label": 0,
+        "n_windows": 4704,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.46565738320350647,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "156",
+        "true_label": 0,
+        "n_windows": 24,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.2454570084810257,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "157",
+        "true_label": 0,
+        "n_windows": 3816,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.4387032389640808,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "158",
+        "true_label": 0,
+        "n_windows": 16,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.21040862798690796,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "159",
+        "true_label": 0,
+        "n_windows": 24,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.19978702068328857,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "160",
+        "true_label": 0,
+        "n_windows": 22,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.2086833417415619,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "161",
+        "true_label": 0,
+        "n_windows": 18,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.18875336647033691,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "162",
+        "true_label": 1,
+        "n_windows": 992,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.47305741906166077,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "163",
+        "true_label": 1,
+        "n_windows": 1120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.47885748744010925,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "164",
+        "true_label": 1,
+        "n_windows": 704,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.45065993070602417,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "165",
+        "true_label": 1,
+        "n_windows": 980,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.48013919591903687,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "166",
+        "true_label": 1,
+        "n_windows": 856,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.49091631174087524,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "167",
+        "true_label": 1,
+        "n_windows": 3808,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.4036572277545929,
+        "vote_pred": 1,
+        "prob_pred": 1
+      }
+    ]
+  },
+  "quality_stratification": {
+    "by_dataset_quality": {
+      "Good": {
+        "count": 12430,
+        "pct_of_total": 72.66,
+        "auroc": 0.5432,
+        "auprc": 0.6071,
+        "sensitivity": 0.8363,
+        "specificity": 0.1431
+      },
+      "Marginal": {
+        "count": 1630,
+        "pct_of_total": 9.53,
+        "auroc": 0.5598,
+        "auprc": 0.46,
+        "sensitivity": 0.9315,
+        "specificity": 0.0898
+      },
+      "Poor": {
+        "count": 3046,
+        "pct_of_total": 17.81,
+        "auroc": 0.396,
+        "auprc": 0.2815,
+        "sensitivity": 0.9423,
+        "specificity": 0.0317
+      }
+    },
+    "by_sqi": {
+      "Low_SQI (<0.50)": {
+        "count": 3898,
+        "pct_of_total": 22.79,
+        "auroc": 0.6263,
+        "auprc": 0.599,
+        "sensitivity": 0.97,
+        "specificity": 0.0405
+      },
+      "High_SQI (>=0.50)": {
+        "count": 13208,
+        "pct_of_total": 77.21,
+        "auroc": 0.5116,
+        "auprc": 0.5408,
+        "sensitivity": 0.8208,
+        "specificity": 0.1294
+      }
+    }
+  },
+  "plots_directory": "C:\\Users\\adria\\Arrhythmia-Thesis\\03 - ML\\training\\runs\\20260913_212328_eval_deepbeat_test"
+}
