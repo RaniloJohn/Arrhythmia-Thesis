@@ -266,9 +266,21 @@ void loop() {
             lastSampleTimeUs = currentUs;
         }
 
-        // Read raw 18-bit samples from MAX30102 FIFO
-        uint32_t irVal = particleSensor.getIR();
-        uint32_t redVal = particleSensor.getRed();
+        // Read raw 18-bit samples from the MAX30102 FIFO.
+        //
+        // IMPORTANT: do NOT use getIR()/getRed() here. Each calls safeCheck(),
+        // which blocks until a *new* FIFO sample arrives, so calling both
+        // consumes two sensor samples per loop pass and halves the effective
+        // rate to 50 Hz (measured 49.8 Hz before this fix, 99.6 Hz after).
+        // The DSP chain is configured for fs = 100 Hz, so the halved rate
+        // silently doubles reported BPM/IBI and shifts the filter cutoffs.
+        particleSensor.check();
+        if (!particleSensor.available()) {
+            return; // no new sample yet; retry next pass
+        }
+        uint32_t irVal  = particleSensor.getFIFOIR();
+        uint32_t redVal = particleSensor.getFIFORed();
+        particleSensor.nextSample();
 
         // Enqueue into ring buffer
         ringBuffer[rbHead].ts = nowMs;

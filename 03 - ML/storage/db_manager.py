@@ -21,61 +21,8 @@ from typing import Optional, Dict, Any, List, Tuple
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), "arrhythmia_edge.db")
 GENESIS_HASH = "0" * 64
 
-# Default password hashes (bcrypt cost 12):
-# admin: admin123
-# clinician: clinician123
-SEED_USERS = [
-    {
-        "user_id": "usr-admin-01",
-        "username": "admin",
-        "password_hash": "$2b$12$wZwimrCy8zichNwWryZ6sOOE5NDe6dBtX9I8.9vDkFWWWfN8JBXoW",
-        "role": "admin",
-        "full_name": "System Administrator (3CPE-2A)"
-    },
-    {
-        "user_id": "usr-clin-01",
-        "username": "clinician",
-        "password_hash": "$2b$12$RTopYMaTdq4Fl8IHEcXV4OD3yJ6D7vFAtwOH9xkfdhlwg8Yi0rviW",
-        "role": "clinician",
-        "full_name": "Dr. Maria Santos, MD (Brgy. 171 Health Center)"
-    }
-]
 
-SEED_PATIENTS = [
-    {
-        "patient_id": "PAT-CAL-001",
-        "name": "Eduardo Ramos",
-        "age": 63,
-        "gender": "Male",
-        "contact_number": "+63 917 555 1024",
-        "barangay": "Barangay 171, Bagumbong, Caloocan City",
-        "device_id": "ESP32C3-NODE-01",
-        "medical_history": "Hypertension (5 yrs), Type 2 Diabetes, occasional palpitations",
-        "notes": "Referred for ambulatory rhythm screening following primary health consultation."
-    },
-    {
-        "patient_id": "PAT-CAL-002",
-        "name": "Corazon Bautista",
-        "age": 58,
-        "gender": "Female",
-        "contact_number": "+63 928 555 3841",
-        "barangay": "Barangay 172, Urduja, Caloocan City",
-        "device_id": "ESP32C3-NODE-02",
-        "medical_history": "Post-menopausal, mild mitral valve prolapse, hyperlipidemia",
-        "notes": "Routine community health center outreach screening."
-    },
-    {
-        "patient_id": "PAT-CAL-003",
-        "name": "Rodrigo Dela Cruz",
-        "age": 71,
-        "gender": "Male",
-        "contact_number": "+63 919 555 9012",
-        "barangay": "Barangay 177, Camarin, Caloocan City",
-        "device_id": "ESP32C3-NODE-03",
-        "medical_history": "Previous transient ischemic attack (TIA 2024), hypertensive heart disease",
-        "notes": "High risk for embolic stroke; prioritize continuous ambulatory check."
-    }
-]
+
 
 
 class DatabaseManager:
@@ -149,24 +96,6 @@ class DatabaseManager:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             """)
-
-            # Seed default users if empty
-            cursor.execute("SELECT COUNT(*) FROM users;")
-            if cursor.fetchone()[0] == 0:
-                for user in SEED_USERS:
-                    cursor.execute("""
-                    INSERT INTO users (user_id, username, password_hash, role, full_name)
-                    VALUES (?, ?, ?, ?, ?);
-                    """, (user["user_id"], user["username"], user["password_hash"], user["role"], user["full_name"]))
-
-            # Seed default patients if empty
-            cursor.execute("SELECT COUNT(*) FROM patients;")
-            if cursor.fetchone()[0] == 0:
-                for p in SEED_PATIENTS:
-                    cursor.execute("""
-                    INSERT INTO patients (patient_id, name, age, gender, contact_number, barangay, device_id, medical_history, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-                    """, (p["patient_id"], p["name"], p["age"], p["gender"], p["contact_number"], p["barangay"], p["device_id"], p["medical_history"], p["notes"]))
 
             conn.commit()
 
@@ -289,22 +218,23 @@ class DatabaseManager:
 
             return True, f"Hash chain verified: {len(rows)} events cryptographically intact.", len(rows)
 
+    def patient_exists(self, patient_id: str) -> bool:
+        """Check if a patient record exists in the patients table."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM patients WHERE patient_id = ? LIMIT 1;", (patient_id,))
+            return cursor.fetchone() is not None
+
+    def clear_events_ledger(self):
+        """Purges all records from arrhythmia_events to reset the ledger."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM arrhythmia_events;")
+            conn.commit()
+
 
 if __name__ == "__main__":
     db = DatabaseManager()
     print("Database initialized at:", db.db_path)
-    # Seed a test event if none exists
     valid, msg, count = db.validate_chain()
     print(f"Chain validation: valid={valid}, count={count}, msg={msg}")
-    if count == 0:
-        event = db.record_event(
-            patient_id="PAT-CAL-001",
-            device_id="ESP32C3-NODE-01",
-            bpm=88.5,
-            af_detected=1,
-            confidence=0.9412,
-            gradcam_path="{\"weights\": [0.1, 0.8, 0.9, 0.3]}"
-        )
-        print("Inserted initial test event:", event["event_id"])
-        valid, msg, count = db.validate_chain()
-        print(f"Chain validation after insert: valid={valid}, count={count}, msg={msg}")

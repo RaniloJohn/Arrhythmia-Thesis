@@ -14,6 +14,7 @@ const { DatabaseSync } = require('node:sqlite');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const config = require('./config');
 
 const GENESIS_HASH = '0'.repeat(64);
@@ -94,73 +95,36 @@ class DatabaseService {
       );
     `);
 
-    // Seed default users if empty (fallback for standalone Node.js launch)
+    // First-run admin bootstrap (PLAN §2)
+    // If users table is empty, read ADMIN_USERNAME & ADMIN_PASSWORD from environment,
+    // hash with bcrypt cost 12 at runtime, and create exactly one admin account.
+    // Never commit a password hash or auto-seed fake accounts.
     try {
       const userCount = this.db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
       if (userCount === 0) {
-        const insertUser = this.db.prepare(`
-          INSERT INTO users (user_id, username, password_hash, role, full_name)
-          VALUES (?, ?, ?, ?, ?)
-        `);
-        insertUser.run(
-          'usr-admin-01',
-          'admin',
-          '$2b$12$wZwimrCy8zichNwWryZ6sOOE5NDe6dBtX9I8.9vDkFWWWfN8JBXoW',
-          'admin',
-          'System Administrator (3CPE-2A)'
-        );
-        insertUser.run(
-          'usr-clin-01',
-          'clinician',
-          '$2b$12$RTopYMaTdq4Fl8IHEcXV4OD3yJ6D7vFAtwOH9xkfdhlwg8Yi0rviW',
-          'clinician',
-          'Dr. Maria Santos, MD (Brgy. 171 Health Center)'
-        );
+        const adminUser = process.env.ADMIN_USERNAME;
+        const adminPass = process.env.ADMIN_PASSWORD;
+        if (adminUser && adminPass) {
+          const salt = bcrypt.genSaltSync(12);
+          const hash = bcrypt.hashSync(adminPass, salt);
+          const insertUser = this.db.prepare(`
+            INSERT INTO users (user_id, username, password_hash, role, full_name)
+            VALUES (?, ?, ?, ?, ?)
+          `);
+          insertUser.run(
+            'usr-admin-01',
+            adminUser,
+            hash,
+            'admin',
+            'System Administrator'
+          );
+          console.log(`[DB] Bootstrapped initial admin user '${adminUser}' from environment.`);
+        } else {
+          console.warn('[DB] Notice: users table is empty and ADMIN_USERNAME / ADMIN_PASSWORD are not set in environment. No admin account created. Supply ADMIN_USERNAME and ADMIN_PASSWORD to bootstrap.');
+        }
       }
-
-      // Seed default patients if empty
-      const patientCount = this.db.prepare('SELECT COUNT(*) AS count FROM patients').get().count;
-      if (patientCount === 0) {
-        const insertPatient = this.db.prepare(`
-          INSERT INTO patients (patient_id, name, age, gender, contact_number, barangay, device_id, medical_history, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        insertPatient.run(
-          'PAT-CAL-001',
-          'Eduardo Ramos',
-          63,
-          'Male',
-          '+63 917 555 1024',
-          'Barangay 171, Bagumbong, Caloocan City',
-          'ESP32C3-NODE-01',
-          'Hypertension (5 yrs), Type 2 Diabetes, occasional palpitations',
-          'Referred for ambulatory rhythm screening following primary health consultation.'
-        );
-        insertPatient.run(
-          'PAT-CAL-002',
-          'Corazon Bautista',
-          58,
-          'Female',
-          '+63 928 555 3841',
-          'Barangay 172, Urduja, Caloocan City',
-          'ESP32C3-NODE-02',
-          'Post-menopausal, mild mitral valve prolapse, hyperlipidemia',
-          'Routine community health center outreach screening.'
-        );
-        insertPatient.run(
-          'PAT-CAL-003',
-          'Rodrigo Dela Cruz',
-          71,
-          'Male',
-          '+63 919 555 9012',
-          'Barangay 177, Camarin, Caloocan City',
-          'ESP32C3-NODE-03',
-          'Previous transient ischemic attack (TIA 2024), hypertensive heart disease',
-          'High risk for embolic stroke; prioritize continuous ambulatory check.'
-        );
-      }
-    } catch (seedErr) {
-      console.warn('[DB] Auto-seeding notice:', seedErr.message);
+    } catch (bootstrapErr) {
+      console.warn('[DB] User bootstrap notice:', bootstrapErr.message);
     }
   }
 
@@ -173,6 +137,19 @@ class DatabaseService {
   getUserById(userId) {
     const stmt = this.db.prepare('SELECT user_id, username, role, full_name, created_at FROM users WHERE user_id = ?');
     return stmt.get(userId);
+  }
+
+  createUser(userId, username, passwordHash, role, fullName) {
+    const stmt = this.db.prepare(`
+      INSERT INTO users (user_id, username, password_hash, role, full_name)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(userId, username, passwordHash, role, fullName);
+    return this.getUserByUsername(username);
+  }
+
+  clearEventsLedger() {
+    this.db.exec('DELETE FROM arrhythmia_events;');
   }
 
   // Patient Queries

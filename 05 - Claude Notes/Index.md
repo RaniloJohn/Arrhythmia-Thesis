@@ -12,7 +12,11 @@ they're searchable in the vault instead of disappearing at the end of a chat.
 ## Notes
 
 - [[2026-09-03 - Website Tier Requirements & Firmware Gap Analysis|2026-09-03 - Website Tier Requirements & Firmware Gap Analysis]]
-- [[2026-09-13 - ML Training Prompt Pack for Antigravity|2026-09-13 - ML Training Prompt Pack for Antigravity]] — the eight-prompt sequence that takes the 1D-CNN from untrained random weights to trained, parity-verified, calibrated weights on the Pi.
+- [[2026-09-10 - Connecting to the Raspberry Pi over Tailscale SSH|2026-09-10 - Connecting to the Raspberry Pi over Tailscale SSH]]
+- [[2026-09-10 - Website Startup Latency & Offline Readiness Diagnosis|2026-09-10 - Website Startup Latency & Offline Readiness Diagnosis]]
+- [[2026-09-10 - Raspberry Pi Deployment Architecture and Runbook|2026-09-10 - Raspberry Pi Deployment Architecture and Runbook]] — **start here when picking the project up cold**
+- [[2026-09-10 - Model Training Plan and Project Roadmap|2026-09-10 - Model Training Plan and Project Roadmap]]
+- [[2026-09-13 - ML Training Prompt Pack for Antigravity|2026-09-13 - ML Training Prompt Pack for Antigravity]] — the prompt pack sequence taking the 1D-CNN from untrained random weights to trained, parity-verified, calibrated weights on the Pi.
 
 ---
 Back to [[../Home|Home]]

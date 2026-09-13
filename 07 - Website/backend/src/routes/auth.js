@@ -17,7 +17,7 @@ const router = express.Router();
  * POST /api/auth/login
  * Authenticates clinician or admin with bcrypt-hashed credentials.
  */
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { username, password } = req.body || {};
 
   if (!username || !password) {
@@ -35,7 +35,7 @@ router.post('/login', (req, res) => {
     });
   }
 
-  const isMatch = bcrypt.compareSync(password, user.password_hash);
+  const isMatch = await bcrypt.compare(password, user.password_hash);
   if (!isMatch) {
     return res.status(401).json({
       error: 'Unauthorized',

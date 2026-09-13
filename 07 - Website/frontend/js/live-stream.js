@@ -26,8 +26,42 @@ class LiveStreamManager {
     this.selectedPatientCard = document.getElementById('selectedPatientCard');
     this.btnToggleSim = document.getElementById('btnToggleSim');
     this.btnPauseStream = document.getElementById('btnPauseStream');
+    this.simulationBanner = document.getElementById('simulationBanner');
 
     this._bindEvents();
+  }
+
+  /**
+   * Renders the "no valid measurement" state: blank the waveform and every
+   * physiological readout, and state plainly why. Showing a dash is correct
+   * here; showing 0 bpm or a rhythm classification would be a clinical claim
+   * the device has no basis for.
+   */
+  renderNoMeasurement(data) {
+    const reasons = {
+      no_skin_contact: 'No skin contact — place finger or wrist on the sensor',
+      low_signal_quality: 'Signal quality too low for a reliable measurement',
+      no_pulse_detected: 'Sensor in contact, but no pulse could be resolved'
+    };
+    const message = reasons[data.invalid_reason] || 'No valid measurement';
+
+    if (this.visualizer) {
+      this.visualizer.updateData([], []);
+    }
+    if (this.bpmDisplay) this.bpmDisplay.innerText = '--';
+    if (this.afProbabilityDisplay) this.afProbabilityDisplay.innerText = '--';
+
+    if (this.alertBanner) {
+      this.alertBanner.className = 'alert-banner idle';
+      if (this.alertText) this.alertText.innerHTML = 'NO MEASUREMENT';
+      if (this.alertSubtext) this.alertSubtext.innerText = message;
+    }
+
+    if (this.sqiScoreBadge) {
+      this.sqiScoreBadge.innerText = (data.sqi && data.sqi.sqi_score != null)
+        ? data.sqi.sqi_score : '--';
+      this.sqiScoreBadge.className = 'budget-badge warn';
+    }
   }
 
   initVisualizer() {
@@ -138,12 +172,22 @@ class LiveStreamManager {
   handleMessage(msg) {
     if (msg.type === 'connection_ack') {
       if (this.btnToggleSim) {
-        this.btnToggleSim.innerText = msg.simulationActive ? 'Stop Live Demo' : 'Start Live Demo';
+        this.btnToggleSim.innerText = msg.simulationActive ? 'Stop Bench Simulation' : 'Start Bench Simulation';
+      }
+      if (this.simulationBanner) {
+        this.simulationBanner.style.display = msg.simulationActive ? 'flex' : 'none';
       }
       if (msg.lastKnownFrame) {
         this.renderFrame(msg.lastKnownFrame, msg.transitLatencyMs || 0, msg.relayTime);
       }
     } else if (msg.type === 'ppg_window') {
+      const isSim = !!(msg.data && (msg.data.is_simulated || msg.data.device_id === 'SIMULATOR-BENCH'));
+      if (this.simulationBanner) {
+        this.simulationBanner.style.display = isSim ? 'flex' : 'none';
+      }
+      if (this.btnToggleSim && isSim) {
+        this.btnToggleSim.innerText = 'Stop Bench Simulation';
+      }
       this.renderFrame(msg.data, msg.transitLatencyMs, msg.relayTime);
     }
   }
@@ -152,6 +196,17 @@ class LiveStreamManager {
     if (!data) return;
 
     const renderStart = performance.now();
+
+    // A window rejected by the edge skin-contact / signal-quality gate carries no
+    // BPM, AF probability or waveform. It must never fall through to the normal
+    // render path: `null !== undefined` is true in JS, so the AF branch below
+    // would evaluate `null >= 0.50` as false and confidently announce NORMAL
+    // SINUS RHYTHM for a device nobody is wearing.
+    if (data.measurement_valid === false) {
+      this.renderNoMeasurement(data);
+      return;
+    }
+    if (this.noSignalBanner) this.noSignalBanner.style.display = 'none';
 
     // 1. Update Waveform & Grad-CAM Heat-Strip
     if (this.visualizer && data.raw_window) {
@@ -217,13 +272,16 @@ class LiveStreamManager {
       const currentActive = statusRes.stats.simulationActive;
       const targetState = !currentActive;
 
-      await window.api.toggleSimulation(targetState, this.selectedPatientId || 'PAT-CAL-001');
+      await window.api.toggleSimulation(targetState, this.selectedPatientId || null);
 
       if (this.btnToggleSim) {
-        this.btnToggleSim.innerText = targetState ? 'Stop Live Demo' : 'Start Live Demo';
+        this.btnToggleSim.innerText = targetState ? 'Stop Bench Simulation' : 'Start Bench Simulation';
+      }
+      if (this.simulationBanner) {
+        this.simulationBanner.style.display = targetState ? 'flex' : 'none';
       }
 
-      window.showToast(targetState ? 'Live demo stream activated' : 'Live demo stream stopped', 'info');
+      window.showToast(targetState ? 'Standalone bench simulation activated' : 'Standalone bench simulation stopped', 'info');
     } catch (err) {
       window.showToast(`Simulation toggle failed: ${err.message}`, 'error');
     }

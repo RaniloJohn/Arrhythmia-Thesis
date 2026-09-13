@@ -6,6 +6,7 @@
 
 const express = require('express');
 const pubsubRelay = require('../bridge/pubsub_relay');
+const config = require('../config');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -48,7 +49,19 @@ router.get('/bridge/status', authenticateToken, (req, res) => {
 router.post('/simulation/toggle', authenticateToken, (req, res) => {
   const { enable, patientId } = req.body || {};
   if (enable) {
-    pubsubRelay.startSimulation(patientId || 'PAT-CAL-001');
+    if (!config.ENABLE_SIMULATION) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Standalone synthetic simulation is disabled in this environment. Set ENABLE_SIMULATION=true to enable bench simulation.'
+      });
+    }
+    const started = pubsubRelay.startSimulation(patientId);
+    if (!started) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Could not start standalone simulation.'
+      });
+    }
   } else {
     pubsubRelay.stopSimulation();
   }

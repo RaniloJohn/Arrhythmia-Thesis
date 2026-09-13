@@ -10,6 +10,7 @@ Engineering logs, implementation blueprints, hardware pinout configs, DSP pipeli
 ## Architectural Decision Records (ADRs)
 
 - [[ADR-001 - Edge Processing Topology & Local Cryptographic Hash Chaining for Offline Primary Care|ADR-001: Edge Processing Topology & Local Cryptographic Hash Chaining for Offline Primary Care]]
+- [[2026-09-10 - ADR-002 Offline Font Self-Hosting and Dual-Toolchain Firmware Port|ADR-002: Offline Font Self-Hosting, Dual-Toolchain Firmware Port, and Production Environment Isolation]]
 
 ## Engineering Blueprints & System Designs
 

@@ -9,8 +9,14 @@ WorkingDirectory=/home/ranilo/Arrhythmia Thesis/07 - Website/backend
 ExecStart=/usr/bin/node src/server.js
 Restart=on-failure
 RestartSec=3
-Environment=NODE_ENV=production
-Environment=PORT=8080
+
+# Secrets are NOT committed to this repository. They live in a 0600 file on the
+# Pi, created once and owned by the service user:
+#   /home/ranilo/.config/arrhythmia/website.env
+# containing JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD, NODE_ENV and PORT.
+# Rotate by editing that file and restarting this unit. Never inline a secret
+# here — this file is under version control.
+EnvironmentFile=/home/ranilo/.config/arrhythmia/website.env
 
 [Install]
 WantedBy=multi-user.target

@@ -46,3 +46,7 @@ Thumbs.db
 
 # Scratch working files
 scratch/
+
+# Credentials kept as a readable vault note rather than a dotenv, so it can be
+# opened in Obsidian alongside the rest of the documentation. Never committed.
+CREDENTIALS.md
