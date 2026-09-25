@@ -1,7 +1,16 @@
 # Arrhythmia Thesis — Project Context for Claude Code
 
-This file is read by Claude Code (the CLI) whenever it runs inside this folder. Keep it
-up to date as the project evolves — it's the fastest way to get a fresh session oriented.
+Auto-loaded whenever Claude Code runs in this folder. Kept deliberately short so it
+costs little every session — **the durable project state lives in `MEMORY.md`**.
+
+## Session start protocol
+
+1. Read **`MEMORY.md`** (repo root) — state of play, settled decisions, open blockers,
+   the routing table, and the session log. That plus this file is enough to start work.
+2. Open other notes **only** as the routing table in `MEMORY.md` directs. Do not bulk-read
+   `01 - Literature/`, `06 - Antigravity Notes/`, or the code trees speculatively.
+3. Before finishing a session that changed something real, append to `MEMORY.md`'s
+   Session Log and update its State of Play if a status flipped.
 
 ## ⚠️ Read this first — where the system actually runs
 
@@ -32,11 +41,14 @@ contract, and the current list of what is broken:**
 contract.
 
 **Three things that must not be misrepresented:**
-1. The 1D-CNN is **untrained** (random init). AF probabilities are noise. The waveform
-   is real; the classification is not.
-2. Inference measures **27.7–42.1 ms** against the 25 ms budget — the budget is
-   currently breached. The "~13.08 ms" figure in `ANTIGRAVITY.md` §5 is stale
-   (synthetic data) and needs correcting.
+1. The 1D-CNN is **trained** (DeepBeat, `cnn_af_v1.npz`, threshold 0.37) — but it does
+   **not** generalise across sensor modality, and its specificity is poor. Internal
+   DeepBeat test: 85.4% window sensitivity against 10.9% specificity. Held-out MIMIC
+   PERform AF (ICU fingertip): AUROC 0.494. 5-fold CV: AUROC 0.330 ± 0.118. Never quote
+   a sensitivity without the specificity and the external number beside it.
+2. Inference measures **16.39 ms mean / 18.43 ms p95** on the Pi — inside the 25 ms
+   budget, re-measured with the trained weights. The "~13.08 ms" figure in
+   `ANTIGRAVITY.md` §5 is a stale synthetic-data measurement and still needs replacing.
 3. The live database still contains 3 fabricated patients and 2 seeded accounts whose
    passwords are in git history. Cleanup is deferred at the owner's request.
 
@@ -47,67 +59,47 @@ Photoplethysmography and Machine Learning
 
 **Team (3CPE-2A, University of the East, Computer Engineering Dept.):**
 Bauzon, John Carlo · Condino, Zidane Vincent · Delos Angeles, Ranilo John · Rana,
-Adrian · Villaflor, Kyle
-**Adviser:** Dr. Nelson Rodelas
+Adrian · Villaflor, Kyle — **Adviser:** Dr. Nelson Rodelas
 
-**One-line summary:** A low-cost, offline-capable IoT system that detects atrial
-fibrillation (AF) from wrist/finger PPG signals using an edge-deployed 1D-CNN, explains
-its classifications with Grad-CAM, and secures event records with a local SQLite cache
-that syncs to a Hyperledger Fabric blockchain — aimed at primary-care / non-hospital
-settings in the Philippines (pilot locale: Caloocan City).
+A low-cost, offline-capable IoT system that detects atrial fibrillation from wrist/finger
+PPG using an edge-deployed 1D-CNN, explains classifications with Grad-CAM, and secures
+event records in a SHA-256 hash-chained SQLite cache that will sync to Hyperledger Fabric
+— for primary-care settings in the Philippines (pilot: Caloocan City).
+
+Full background, research questions, scope and methodology:
+`04 - Thesis Reference/Thesis Overview.md`. Current build status: `MEMORY.md`.
+
+⚠️ The 1D-CNN is trained, but **cross-sensor generalisation is not demonstrated** and
+specificity is low — always cite the external MIMIC and cross-validated bounds alongside
+the internal sensitivity. See `MEMORY.md` for the full caveat.
 
 ## This folder is an Obsidian vault
 
-The whole `Arrhythmia Thesis` folder doubles as the project's Obsidian vault — it's the
-database for reading (literature) and for tracking code review notes. Open it in Obsidian
-directly (Open folder as vault). Notes are Markdown with `[[wikilinks]]` for
-cross-referencing; each section has its own `Index.md` — link new notes into it so the
-vault stays navigable.
+The whole folder doubles as the project's Obsidian vault (Open folder as vault). Notes
+are Markdown with `[[wikilinks]]`; each section has an `Index.md` — link new notes into
+it so the vault stays navigable.
 
-## Folder layout
+- **`01 - Literature/`** — one note per source (142 notes). Template:
+  `_Templates/Literature Note Template.md`. Name `Author-Year-ShortTitle.md`.
+- **`02 - Code Review/`** — review findings, TODOs, decisions. Template:
+  `_Templates/Code Review Note Template.md`. Name `YYYY-MM-DD - <component>.md`.
+- **`03 - ML/`** — edge ML/DSP/firmware codebase (Python + C++, ESP32-C3 / Raspberry Pi).
+  See `03 - ML/README.md`. Does **not** contain the website.
+- **`04 - Thesis Reference/`** — the thesis PDF and `Thesis Overview.md`.
+- **`05 - Claude Notes/`** — outputs worth keeping from Claude sessions.
+- **`06 - Antigravity Notes/`** — Antigravity's blueprints, ADRs, benchmarking logs.
+- **`07 - Website/`** — clinician dashboard (Node.js backend + HTML/CSS/JS frontend),
+  its own codebase. See `07 - Website/README.md`.
+- **`08 - Hardware/`** — parametric CAD for the physical build (CadQuery → STEP/STL).
+  `enclosure/params.py` is the single source of truth for every dimension; `build.py`
+  runs geometric pre-flight checks before it will export. `print-ready/` holds what
+  actually goes to the print shop. See `08 - Hardware/enclosure/README.md`.
 
-- **`01 - Literature/`** — one note per source read for the thesis (citation, summary,
-  key findings, relevance). New notes start from `_Templates/Literature Note
-  Template.md`. Name files `Author-Year-ShortTitle.md` and link them from
-  `01 - Literature/Index.md`.
-- **`02 - Code Review/`** — findings from reviewing the codebase (with Claude Code or
-  otherwise): issues, TODOs, architecture notes, decisions. New notes start from
-  `_Templates/Code Review Note Template.md`. Name files `YYYY-MM-DD - <component>.md`
-  and link them from `02 - Code Review/Index.md`.
-- **`03 - ML/`** — the edge ML/DSP/firmware codebase: ESP32-C3 firmware, signal
-  processing, 1D-CNN + Grad-CAM, and the SQLite/hash-chain storage layer (Python + C++,
-  runs on the ESP32/Raspberry Pi). See `03 - ML/README.md`. Does **not** contain the
-  website — see `07 - Website/` below.
-- **`04 - Thesis Reference/`** — reference material: the thesis document itself and
-  `Thesis Overview.md`, a working summary of Chapters 1–3 for quick context.
-- **`05 - Claude Notes/`** — outputs produced during Claude sessions (diagrams,
-  analyses, summaries) that are worth keeping. Save them here as Markdown instead of
-  letting them disappear at the end of the terminal scrollback.
-- **`06 - Antigravity Notes/`** — implementation blueprints, engineering analyses, and
-  benchmarking logs produced by Antigravity (Gemini).
-- **`07 - Website/`** — the clinician-facing web dashboard, kept as its own codebase
-  separate from `03 - ML/` (different runtime/deploy lifecycle — Node.js web server vs.
-  Python/C++ edge pipeline). `backend/` is the Node.js API + WebSocket relay + auth;
-  `frontend/` is the HTML5/CSS3/JS client (patient CRUD, login, live PPG view with
-  Grad-CAM overlay). Shares the same SQLite file as `03 - ML/storage/` (WAL mode, per
-  ADR-001) but owns a separate `patients` table — see `PLAN.md` and
-  `05 - Claude Notes/2026-09-03 - Website Tier Requirements & Firmware Gap Analysis.md`.
-- **`08 - Hardware/`** — parametric CAD for the physical build. `enclosure/` is the
-  wrist-worn housing for the acquisition node (ESP32-C3 + MAX30102 over the radial
-  artery + SSD1306), authored in **CadQuery** (Python 3.12 + OCCT) and exported to
-  STEP for the print shop and Fusion 360, plus STL for the slicer. `params.py` is the
-  single source of truth for every dimension — change it there and re-run `build.py`,
-  which runs geometric pre-flight checks before it will export. See
-  `05 - Claude Notes/2026-09-11 - Wrist Enclosure Design Specification.md`.
+## Working conventions
 
-## Working conventions for Claude Code
-
-- When reviewing code changes or debugging, write findings to `02 - Code Review/`
-  using the template — don't leave them only in chat output.
-- When reading or summarizing a new paper for the lit review, create a note in
-  `01 - Literature/` using the template.
-- Any diagram, architecture note, or non-trivial summary produced during a session
-  should be saved as a file in `05 - Claude Notes/`, not just printed to the terminal.
+- Findings from reviewing or debugging code → a note in `02 - Code Review/`, not just chat.
+- A paper read or summarized → a note in `01 - Literature/`.
+- Any diagram, architecture note, or non-trivial summary → a file in `05 - Claude Notes/`.
 - Link every new note into its section's `Index.md`.
 - **Dual-agent collaboration:** Antigravity (Gemini) serves as the Software Engineer
   Architect working with Claude via `orchestrate.bat`. While Claude leads research
@@ -115,10 +107,9 @@ vault stays navigable.
   interface contracts, ADRs, and edge implementation. When writing implementation steps
   or plans, output a concise, atomic checklist into `PLAN.md` for Antigravity to execute.
   See [[ANTIGRAVITY.md|ANTIGRAVITY.md]] for Antigravity's operational charter.
-- Keep this file (`CLAUDE.md`) current: as source code is added under `03 - ML/`,
-  fill in the real directory layout, build/run commands, and dependencies below.
+- Keep `MEMORY.md` current; keep this file short.
 
-## Tech stack (confirmed against actual code as of 2026-09-03)
+## Tech stack (confirmed against actual code)
 
 - **Sensing hardware:** MAX30102 PPG sensor (red 660 nm / IR 940 nm), ESP32-C3
   microcontroller (I²C on GPIO 8/9), SSD1306 0.96" OLED display, Raspberry Pi 4/5,
@@ -131,15 +122,11 @@ vault stays navigable.
 - **Signal processing:** Python on the Raspberry Pi (`03 - ML/signal_processing/`) —
   Butterworth bandpass filtering, detrending, Signal Quality Index (SQI), Elgendi peak
   detection → inter-beat intervals (IBI)/BPM. Real and working.
-- **ML classification — ⚠️ untrained placeholder, not yet a result:** a 1D-CNN
-  (`03 - ML/model/inference_model.py`) implementing the Chapter 2 architecture
-  (2× Conv1D+ReLU+MaxPool → Dense(64, ReLU) → Sigmoid) and a matching 1D Grad-CAM
-  (`grad_cam.py`) — but the weights are **randomly initialized, not trained on the
-  MIMIC PERform AF Dataset** (see
-  [[02 - Code Review/2026-09-03 - 1D-CNN Inference Model Uses Untrained Random Weights|code review note]]).
-  The full pipeline (DSP → inference → Grad-CAM → storage → live dashboard) runs
-  correctly end to end, but its AF classification/explainability output is not yet
-  evidence-based — don't present current demo output as a validated result.
+- **ML classification:** 1D-CNN (`03 - ML/model/inference_model.py`) implementing Chapter 2
+  architecture (2× Conv1D+ReLU+MaxPool → Dense(64, ReLU) → Sigmoid) and 1D Grad-CAM
+  (`grad_cam.py`). Trained on DeepBeat wrist reflectance PPG (`03 - ML/model/weights/cnn_af_v1.npz`,
+  calibrated threshold $\tau = 0.3700$). Validated on held-out external MIMIC PERform AF cohort.
+  Runs in pure NumPy on the Pi (<25 ms budget verified).
 - **Data / security:** SQLite (`03 - ML/storage/db_manager.py`) with WAL mode and
   SHA-256 backward hash-chaining per diagnostic event (verified: tamper-evident,
   independently re-checked). Configurable target patient (`TARGET_PATIENT_ID` / `--patient`),
@@ -155,9 +142,7 @@ vault stays navigable.
   32/32 backend tests passing (independently re-run).
 - **Methodology:** Agile Scrum SDLC; evaluated against the ISO/IEC 25010 software
   quality model (Functional Suitability, Performance Efficiency, Reliability, Security,
-  Usability, Maintainability/Portability) — note the model-training gap above means
-  Functional Suitability (sensitivity/specificity) is not yet measurable against real
-  results.
+  Usability, Maintainability/Portability).
 
 ## Research questions the system must ultimately answer for (Chapter 1)
 

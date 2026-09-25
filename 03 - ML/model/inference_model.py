@@ -12,9 +12,11 @@ Specifications:
 - Edge latency budget: < 25 ms per inference window on Raspberry Pi 4 (ARM Cortex-A72)
 """
 
+import json
 import time
+from pathlib import Path
+from typing import Tuple, Dict, Any, Union, Optional
 import numpy as np
-from typing import Tuple, Dict, Any
 
 
 def relu(x: np.ndarray) -> np.ndarray:
@@ -90,6 +92,17 @@ class Arrhythmia1DCNN:
     """
     Lightweight 1D-CNN conforming to Chapter 2 Fig 2.1 & ANTIGRAVITY.md §4.3.
     """
+    EXPECTED_WEIGHT_SHAPES = {
+        "conv1.weights": (32, 1, 5),
+        "conv1.bias": (32,),
+        "conv2.weights": (64, 32, 3),
+        "conv2.bias": (64,),
+        "dense1.weights": (16000, 64),
+        "dense1.bias": (64,),
+        "dense_out.weights": (64, 1),
+        "dense_out.bias": (1,),
+    }
+
     def __init__(self, input_length: int = 1000):
         self.input_length = input_length
 
@@ -106,14 +119,78 @@ class Arrhythmia1DCNN:
         self.dense1 = DenseBlock(in_features=flatten_dim, out_features=64, seed=303)
         self.dense_out = DenseBlock(in_features=64, out_features=1, seed=404)
 
-        # Calibrate weights with physiological priors (mimicking trained MIMIC-PERform weights)
-        self._calibrate_weights()
+        # Operational status and classification threshold
+        self.threshold: float = 0.50
+        self.weights_loaded: bool = False
+        self.weights_source: Optional[str] = None
+        self.model_version: str = "untrained_he_init"
+        self.training_dataset: str = "none"
+        self.model_meta: Dict[str, Any] = {}
 
-    def _calibrate_weights(self):
-        """Set realistic physiological sensitivity weights for AF pulse morphology detection."""
-        # AF is characterized by high variability and lack of sharp dicrotic notch
-        np.random.seed(42)
-        self.dense_out.bias[0] = -0.35  # Baseline NSR bias
+    def load_weights(self, path: Union[str, Path]) -> None:
+        """
+        Load trained weights from a .npz archive, asserting exact array shapes.
+
+        Also loads the calibrated decision threshold from the sibling .meta.json
+        file if present.
+
+        Args:
+            path: Path to the .npz weights archive.
+
+        Raises:
+            FileNotFoundError: If the weights file does not exist.
+            ValueError: If required keys are missing or shapes do not match.
+        """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Weights file not found: {path.resolve()}")
+
+        with np.load(path) as data:
+            for key, expected_shape in self.EXPECTED_WEIGHT_SHAPES.items():
+                if key not in data:
+                    raise ValueError(f"Missing required weight key '{key}' in {path}")
+                arr = data[key]
+                if arr.shape != expected_shape:
+                    raise ValueError(
+                        f"Shape mismatch for '{key}': expected {expected_shape}, got {arr.shape} in {path}"
+                    )
+
+            self.conv1.weights = np.asarray(data["conv1.weights"], dtype=np.float32)
+            self.conv1.bias = np.asarray(data["conv1.bias"], dtype=np.float32)
+            self.conv2.weights = np.asarray(data["conv2.weights"], dtype=np.float32)
+            self.conv2.bias = np.asarray(data["conv2.bias"], dtype=np.float32)
+            self.dense1.weights = np.asarray(data["dense1.weights"], dtype=np.float32)
+            self.dense1.bias = np.asarray(data["dense1.bias"], dtype=np.float32)
+            self.dense_out.weights = np.asarray(data["dense_out.weights"], dtype=np.float32)
+            self.dense_out.bias = np.asarray(data["dense_out.bias"], dtype=np.float32)
+
+        # Attempt to read threshold and metadata from sibling .meta.json
+        meta_path = (
+            path.with_name(path.stem + ".meta.json")
+            if path.name.endswith(".npz")
+            else path.with_suffix(".meta.json")
+        )
+        if meta_path.exists():
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                    self.model_meta = meta
+                    if "decision_threshold" in meta:
+                        self.threshold = float(meta["decision_threshold"])
+                    elif "threshold" in meta:
+                        self.threshold = float(meta["threshold"])
+                    if "training_dataset" in meta and isinstance(meta["training_dataset"], dict):
+                        self.training_dataset = meta["training_dataset"].get("name", "deepbeat")
+                    elif "training_dataset" in meta:
+                        self.training_dataset = str(meta["training_dataset"])
+            except Exception:
+                self.threshold = 0.50
+        else:
+            self.threshold = 0.50
+
+        self.weights_loaded = True
+        self.weights_source = str(path.resolve())
+        self.model_version = path.stem
 
     def forward_with_cache(self, x: np.ndarray) -> Dict[str, Any]:
         """
@@ -151,7 +228,7 @@ class Arrhythmia1DCNN:
 
         return {
             "af_probability": prob,
-            "af_detected": int(prob >= 0.50),
+            "af_detected": int(prob >= self.threshold),
             "latency_ms": round(latency_ms, 2),
             # Cache for Grad-CAM
             "x_in": x_in,

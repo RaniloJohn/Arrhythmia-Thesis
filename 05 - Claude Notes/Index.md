@@ -19,6 +19,7 @@ they're searchable in the vault instead of disappearing at the end of a chat.
 - [[2026-09-11 - Wrist Enclosure Design Specification|2026-09-11 - Wrist Enclosure Design Specification]] — 3D-printable housing for the wrist node; wiring, envelope, and print-shop brief
 - [[2026-09-11 - Wrist vs Fingertip Sensing - SOP and RRL Alignment|2026-09-11 - Wrist vs Fingertip Sensing - SOP and RRL Alignment]] — whether switching acquisition site still answers the Statement of the Problem
 - [[2026-09-11 - Enclosure Print Order Brief|2026-09-11 - Enclosure Print Order Brief]] — **hand this to the print shop**; two-stage order, material, orientation and hardware list
+- [[2026-09-13 - ML Training Prompt Pack for Antigravity|2026-09-13 - ML Training Prompt Pack for Antigravity]] — the prompt pack sequence taking the 1D-CNN from untrained random weights to trained, parity-verified, calibrated weights on the Pi.
 
 ---
 Back to [[../Home|Home]]

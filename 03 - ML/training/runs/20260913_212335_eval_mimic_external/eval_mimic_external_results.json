@@ -1,0 +1,420 @@
+{
+  "split_key": "mimic_external",
+  "split_display": "MIMIC PERform AF (Held-Out External Validation)",
+  "evaluation_timestamp": "20260913_212335",
+  "threshold": 0.37,
+  "data_path": "C:\\Users\\adria\\Arrhythmia-Thesis\\03 - ML\\data\\processed\\mimic_external_val.npz",
+  "weights_path": "C:\\Users\\adria\\Arrhythmia-Thesis\\03 - ML\\model\\weights\\cnn_af_v1.npz",
+  "window_metrics": {
+    "auroc": 0.4941893960160819,
+    "auprc": 0.5146620662116863,
+    "sensitivity": 0.21578947368421053,
+    "specificity": 0.715625,
+    "ppv": 0.47398843930635837,
+    "npv": 0.43453510436432635,
+    "accuracy": 0.4442857142857143,
+    "f1": 0.2965641952983725,
+    "youden_j": -0.06858552631578951,
+    "brier_score": 0.307679146528244,
+    "tp": 492,
+    "fp": 546,
+    "tn": 1374,
+    "fn": 1788,
+    "total": 4200
+  },
+  "window_bootstrap_cis": {
+    "auroc": [
+      0.3343,
+      0.6595
+    ],
+    "auprc": [
+      0.3307,
+      0.739
+    ],
+    "sensitivity": [
+      0.1111,
+      0.3422
+    ],
+    "specificity": [
+      0.5218,
+      0.8788
+    ],
+    "ppv": [
+      0.2324,
+      0.7634
+    ],
+    "npv": [
+      0.2529,
+      0.6172
+    ],
+    "accuracy": [
+      0.314,
+      0.5765
+    ],
+    "f1": [
+      0.1548,
+      0.4426
+    ]
+  },
+  "subject_metrics": {
+    "n_subjects": 35,
+    "majority_vote": {
+      "sensitivity": 0.1579,
+      "specificity": 0.6875,
+      "accuracy": 0.4,
+      "tp": 3,
+      "fp": 5,
+      "tn": 11,
+      "fn": 16,
+      "total": 35
+    },
+    "mean_probability": {
+      "sensitivity": 0.1579,
+      "specificity": 0.75,
+      "accuracy": 0.4286,
+      "tp": 3,
+      "fp": 4,
+      "tn": 12,
+      "fn": 16,
+      "total": 35
+    },
+    "subject_breakdown": [
+      {
+        "subject_id": "mimic_perform_af_001",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.32331618666648865,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_002",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.36024031043052673,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_003",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.34292691946029663,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_004",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2828480303287506,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_005",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.4009043276309967,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_af_006",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2955746352672577,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_007",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.3767991065979004,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_af_008",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.40908101201057434,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_af_009",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2677345275878906,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_010",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.3596811890602112,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_011",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.33715614676475525,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_012",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2354722023010254,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_013",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2689833343029022,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_014",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2895273268222809,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_015",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.32138195633888245,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_016",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.25792422890663147,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_017",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.268354594707489,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_018",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.2638151943683624,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_af_019",
+        "true_label": 1,
+        "n_windows": 120,
+        "af_window_pct": 100.0,
+        "mean_prob": 0.28111037611961365,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_001",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.42246678471565247,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_non_af_002",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.40871137380599976,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_non_af_003",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.27388471364974976,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_004",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.19143705070018768,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_005",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.24699464440345764,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_006",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.29787543416023254,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_007",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.28107115626335144,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_008",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.23389148712158203,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_009",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.3666824996471405,
+        "vote_pred": 1,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_010",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.344625860452652,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_011",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.2500501275062561,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_012",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.4584484100341797,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_non_af_013",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.23443904519081116,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_014",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.38899582624435425,
+        "vote_pred": 1,
+        "prob_pred": 1
+      },
+      {
+        "subject_id": "mimic_perform_non_af_015",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.3447814881801605,
+        "vote_pred": 0,
+        "prob_pred": 0
+      },
+      {
+        "subject_id": "mimic_perform_non_af_016",
+        "true_label": 0,
+        "n_windows": 120,
+        "af_window_pct": 0.0,
+        "mean_prob": 0.299100786447525,
+        "vote_pred": 0,
+        "prob_pred": 0
+      }
+    ]
+  },
+  "quality_stratification": {
+    "by_sqi": {
+      "Low_SQI (<0.50)": {
+        "count": 112,
+        "pct_of_total": 2.67,
+        "auroc": 0.5221,
+        "auprc": 0.3311,
+        "sensitivity": 0.8,
+        "specificity": 0.2078
+      },
+      "High_SQI (>=0.50)": {
+        "count": 4088,
+        "pct_of_total": 97.33,
+        "auroc": 0.5019,
+        "auprc": 0.5273,
+        "sensitivity": 0.2067,
+        "specificity": 0.7368
+      }
+    }
+  },
+  "plots_directory": "C:\\Users\\adria\\Arrhythmia-Thesis\\03 - ML\\training\\runs\\20260913_212335_eval_mimic_external"
+}

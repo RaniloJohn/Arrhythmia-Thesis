@@ -1,0 +1,17 @@
+{
+  "dataset_name": "DeepBeat",
+  "citation": "Torres-Soto & Ashley (2020), npj Digital Medicine 3:116",
+  "repository": "https://www.synapse.org/syn21985690",
+  "sampling_rate": 32.0,
+  "native_window_s": 25.0,
+  "window_samples": 800,
+  "rhythm_classes": {
+    "0": "non-AF",
+    "1": "AF"
+  },
+  "quality_classes": {
+    "0": "good",
+    "1": "marginal",
+    "2": "poor"
+  }
+}
