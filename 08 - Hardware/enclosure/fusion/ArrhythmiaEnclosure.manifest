@@ -1,0 +1,10 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "script",
+    "author": "3CPE-2A, University of the East",
+    "description": {
+        "": "Imports the Arrhythmia wrist enclosure and its reference boards as one aligned assembly."
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}

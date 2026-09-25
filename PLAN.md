@@ -114,6 +114,32 @@ nothing here ever ships to the Pi.
 - [ ] Update the Functional Suitability row to state plainly that sensitivity,
       specificity and accuracy are **not yet measurable** because the model is untrained.
 
+## 6. Wrist enclosure — addendum, 2026-09-11
+
+The parametric CAD is written, validated and committed at `08 - Hardware/enclosure/`
+(CadQuery → STEP + STL). Design record:
+`05 - Claude Notes/2026-09-11 - Wrist Enclosure Design Specification.md`.
+
+This is **not** an Antigravity implementation task — the geometry is done. It is listed
+here so the open items are not lost.
+
+- [x] Identify the module — **MH-ET LIVE MAX30102, 21 × 16 mm**, from the MakerLab PH
+      product photo. `MAX_VARIANT = "mhetlive"` is set and the enclosure builds.
+- [ ] Photograph the **front** (sensor side) flat next to a ruler and set `AP_DX`/`AP_DY`,
+      then clear `AP_PROVISIONAL`. The aperture position is assumed centred right now, and
+      `build.py` warns on every build. **Do not send the current export to the shop.**
+- [ ] Note for the firmware, not the enclosure: the `1V8`/`3V3` pads on that board select
+      the I²C pull-up rail. Strapped to 1.8 V the sensor never answers a 3.3 V I²C scan.
+      If a replacement module ever reads as missing, check that jumper before the driver.
+- [ ] Order the Stage-1 fit gauge from the print shop. **Does not block on the item
+      above** — `python build.py --gauge` already exports it, and the optical aperture
+      is a property of the MAX30102 chip package, not the breakout.
+- [ ] Set `CLEARANCE` from whichever gauge column gives a firm slip fit, then order the
+      enclosure itself.
+
+Do not delete a check in `build.py` to make a build pass. Two of them caught real
+defects on the first run — see the spec note.
+
 ## Explicitly out of scope
 
 - **Training the model.** A teammate does this in Colab. No local training pipeline, no

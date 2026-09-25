@@ -92,6 +92,13 @@ vault stays navigable.
   Grad-CAM overlay). Shares the same SQLite file as `03 - ML/storage/` (WAL mode, per
   ADR-001) but owns a separate `patients` table — see `PLAN.md` and
   `05 - Claude Notes/2026-09-03 - Website Tier Requirements & Firmware Gap Analysis.md`.
+- **`08 - Hardware/`** — parametric CAD for the physical build. `enclosure/` is the
+  wrist-worn housing for the acquisition node (ESP32-C3 + MAX30102 over the radial
+  artery + SSD1306), authored in **CadQuery** (Python 3.12 + OCCT) and exported to
+  STEP for the print shop and Fusion 360, plus STL for the slicer. `params.py` is the
+  single source of truth for every dimension — change it there and re-run `build.py`,
+  which runs geometric pre-flight checks before it will export. See
+  `05 - Claude Notes/2026-09-11 - Wrist Enclosure Design Specification.md`.
 
 ## Working conventions for Claude Code
 
