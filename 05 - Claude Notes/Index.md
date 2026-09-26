@@ -20,6 +20,8 @@ they're searchable in the vault instead of disappearing at the end of a chat.
 - [[2026-09-11 - Wrist vs Fingertip Sensing - SOP and RRL Alignment|2026-09-11 - Wrist vs Fingertip Sensing - SOP and RRL Alignment]] — whether switching acquisition site still answers the Statement of the Problem
 - [[2026-09-11 - Enclosure Print Order Brief|2026-09-11 - Enclosure Print Order Brief]] — **hand this to the print shop**; two-stage order, material, orientation and hardware list
 - [[2026-09-13 - ML Training Prompt Pack for Antigravity|2026-09-13 - ML Training Prompt Pack for Antigravity]] — the prompt pack sequence taking the 1D-CNN from untrained random weights to trained, parity-verified, calibrated weights on the Pi.
+- [[2026-09-25 - The Training Dataset Explained, and What Is Wrong With It|2026-09-25 - The Training Dataset Explained, and What Is Wrong With It]] — plain-language walkthrough of the DeepBeat/MIMIC datasets and the training process, plus the defect list (the shipped weights were trained on 4 subjects, not 12)
+- [[2026-09-25 - Model and Dataset Diagnostic Review and Improvement Plan|2026-09-25 - Model and Dataset Diagnostic Review and Improvement Plan]] — ML-researcher diagnosis of the trained model and corpus, prioritised fixes and a validation plan; **nothing implemented**
 
 ---
 Back to [[../Home|Home]]

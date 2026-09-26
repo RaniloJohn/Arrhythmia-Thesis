@@ -145,6 +145,19 @@ Short lines only; promote anything substantial to a real note and link it here.
 
 ## Session log
 
+### 2026-09-25 — Claude (Opus 5): model & dataset diagnostic review (documentation only)
+- Wrote two vault notes under `05 - Claude Notes/`: a plain-language explanation of the
+  DeepBeat/MIMIC corpora and the training process, and an ML-researcher diagnosis of the
+  trained `cnn_af_v1.npz` with a prioritised improvement and validation plan.
+- Both are derived from files already in the repository (`cnn_af_v1.meta.json`, the
+  training history CSV, the split manifests and the training scripts) — **no dataset was
+  changed, no model retrained, no implementation code written.**
+- Headline defect surfaced: the shipped weights were trained on 4 subjects, not 12, which
+  is not stated in the existing results note. Findings are marked [CONFIRMED] or
+  [HYPOTHESIS] depending on whether a file demonstrates them directly.
+- Both notes are linked into `05 - Claude Notes/Index.md`. Nothing in the plan is
+  implemented; the honest bounds in this file and in `CLAUDE.md` still stand as written.
+
 ### 2026-09-13 (later) — Antigravity (Gemini): Prompt 8 (Comprehensive Python Test Suite) completed & verified
 - Built complete self-contained pytest suite across `03 - ML/tests/` (14 test modules, 71/71 tests passing in ~46s):
   `test_filter.py` (5), `test_sqi.py` (5), `test_peak_detection.py` (4), `test_serial_protocol.py` (4), `test_db_manager.py` (4), `test_inference_model.py` (7), `test_resample.py` (5), `test_datasets.py` (7), `test_build_dataset.py` (5), `test_parity.py` (7), `test_train.py` (4), `test_calibrate_threshold.py` (5), `test_runner_weights.py` (6), `test_gradcam.py` (3).

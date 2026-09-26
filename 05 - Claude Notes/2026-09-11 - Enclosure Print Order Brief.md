@@ -32,11 +32,11 @@ This second gauge exists because of a specific exposure. Every board sits in the
 **0.25 mm of margin**, and every one of those outlines is a catalogue figure rather than a
 caliper reading:
 
-| Board | Assumed outline | Margin | Source |
-|---|---|---|---|
-| SSD1306 | 27.3 × 27.8 | 0.25 mm | catalogue — **and it sets the whole cavity** |
-| ESP32-C3 | 22.5 × 18.0 | 0.25 mm | catalogue |
-| MAX30102 | 21.0 × 16.0 | 0.25 mm | catalogue |
+| Board    | Assumed outline | Margin  | Source                                       |
+| -------- | --------------- | ------- | -------------------------------------------- |
+| SSD1306  | 27.3 × 27.8     | 0.25 mm | catalogue — **and it sets the whole cavity** |
+| ESP32-C3 | 22.5 × 18.0     | 0.25 mm | catalogue                                    |
+| MAX30102 | 21.0 × 16.0     | 0.25 mm | catalogue                                    |
 
 A board 0.3 mm larger than its datasheet in the wrong axis does not go in, and the enclosure is
 scrap. Two cheap flat plates remove that exposure entirely.
