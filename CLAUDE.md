@@ -41,11 +41,22 @@ contract, and the current list of what is broken:**
 contract.
 
 **Three things that must not be misrepresented:**
-1. The 1D-CNN is **untrained** (random init). AF probabilities are noise. The waveform
-   is real; the classification is not.
-2. Inference measures **27.7–42.1 ms** against the 25 ms budget — the budget is
-   currently breached. The "~13.08 ms" figure in `ANTIGRAVITY.md` §5 is stale
-   (synthetic data) and needs correcting.
+1. The deployed classifier is **`ibi_af_v1`** — interval-irregularity features into a
+   logistic regression, not the 1D-CNN. Patient-disjoint 5-fold CV: subject AUROC
+   **0.970 (95% CI [0.908, 1.000], n=35)**; 100% sens / 93.8% spec at the subject level
+   with 3-of-5 consensus. **Always quote the interval and n=35.** It was trained on MIMIC
+   PERform AF (bedside pulse-oximetry PPG, transmissive) and has **never been validated on
+   this project's own MAX30102**, which is a **reflectance** sensor. Per the team's 2026-09-11
+   decision the primary site is now the fingertip, so the residual gap is reflectance vs
+   transmissive at a matching site. State that limitation whenever accuracy is described.
+   **The 1D-CNN is NOT validated and `cnn_af_v1.npz` must never be cited.** Its Chapter 2
+   topology has a 0.12 s receptive field, so no convolutional feature can observe even one
+   inter-beat interval. The 2026-09-13 figures (85.4% sensitivity, AUROC 0.494, CV
+   0.330) are void — that model scored 0.349 on its own training data. So are the DeepBeat
+   dataset figures: it holds **20.0 h** of unique signal (2.4 h AF), not 3,725 h.
+2. Latency: the edge pipeline runs in **3.6–7.3 ms** on the dev machine, well inside the
+   25 ms budget. **This has not yet been re-measured on the Pi** with `ibi_af_v1`, so do
+   not quote it as a deployment figure. `ANTIGRAVITY.md` §5's "~13.08 ms" is stale.
 3. The live database still contains 3 fabricated patients and 2 seeded accounts whose
    passwords are in git history. Cleanup is deferred at the owner's request.
 
@@ -59,15 +70,16 @@ Bauzon, John Carlo · Condino, Zidane Vincent · Delos Angeles, Ranilo John · R
 Adrian · Villaflor, Kyle — **Adviser:** Dr. Nelson Rodelas
 
 A low-cost, offline-capable IoT system that detects atrial fibrillation from wrist/finger
-PPG using an edge-deployed 1D-CNN, explains classifications with Grad-CAM, and secures
+PPG at the edge, explains each classification at beat level, and secures
 event records in a SHA-256 hash-chained SQLite cache that will sync to Hyperledger Fabric
 — for primary-care settings in the Philippines (pilot: Caloocan City).
 
 Full background, research questions, scope and methodology:
 `04 - Thesis Reference/Thesis Overview.md`. Current build status: `MEMORY.md`.
 
-⚠️ The 1D-CNN's weights are **untrained** — never present its classification or Grad-CAM
-output as a validated result. See `MEMORY.md` for the full caveat.
+⚠️ The deployed classifier is `ibi_af_v1` (interval irregularity + logistic regression),
+**not** the 1D-CNN, and it has never been validated on the project's own MAX30102 hardware.
+See `MEMORY.md` for the full caveat before describing accuracy anywhere.
 
 ## This folder is an Obsidian vault
 
@@ -86,6 +98,10 @@ it so the vault stays navigable.
 - **`06 - Antigravity Notes/`** — Antigravity's blueprints, ADRs, benchmarking logs.
 - **`07 - Website/`** — clinician dashboard (Node.js backend + HTML/CSS/JS frontend),
   its own codebase. See `07 - Website/README.md`.
+- **`08 - Hardware/`** — parametric CAD for the physical build (CadQuery → STEP/STL).
+  `enclosure/params.py` is the single source of truth for every dimension; `build.py`
+  runs geometric pre-flight checks before it will export. `print-ready/` holds what
+  actually goes to the print shop. See `08 - Hardware/enclosure/README.md`.
 
 ## Working conventions
 

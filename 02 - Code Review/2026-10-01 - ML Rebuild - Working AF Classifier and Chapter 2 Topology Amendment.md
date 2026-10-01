@@ -92,11 +92,25 @@ each, and demonstrably learnable. This is the reverse of decision 9 and must go 
 adviser with §1 as the justification — it changes Chapter 3 again, which is why the evidence
 is recorded in full here rather than summarised.
 
-The honest framing of the sensor question, which is *stronger* than the v1 "domain
-generalization collapse" claim because it is symmetric and measured: a model fitted to
-fingertip transmissive PPG transfers poorly to wrist reflectance PPG (subject AUROC 0.583),
-and the wrist cohort available to us is too coarsely sampled to fit on. Both directions are
-reported; neither is hidden.
+**Independently corroborated, which makes this the easier of the two reversals to defend.**
+The team had already reached a compatible conclusion on 2026-09-11, from entirely separate
+premises: `05 - Claude Notes/2026-09-11 - Wrist vs Fingertip Sensing - SOP and RRL Alignment.md`
+moves the primary measurement site to the **fingertip** and names MIMIC PERform AF as the
+matching corpus — reasoning that the device is a USB-tethered seated screening instrument
+rather than a continuous wearable, and that DeepBeat publishes no reference ECG so its labels
+cannot be benchmarked. That note also establishes that **the Statement of the Problem does not
+constrain the acquisition site at all**: "wrist", "wearable" and "continuous" appear in Scope
+and Significance, never in the five research questions.
+
+Two consequences:
+
+* The dataset reversal **erases the Chapter 3 documentation debt instead of creating one** —
+  Chapter 2 and `ANTIGRAVITY.md` §4.3 already name MIMIC PERform AF.
+* The residual domain gap is **reflectance vs transmissive at a matching site**, not wrist vs
+  finger. That is a materially smaller gap, since both sit on high-perfusion fingertip tissue
+  with similar pulsatile morphology. The measured 0.583 figure is transfer to *wrist*
+  reflectance and now characterises the **secondary** wrist comparison that the 2026-09-11
+  note recommends keeping, not the primary deployment path.
 
 ---
 
@@ -288,10 +302,14 @@ chance-level model over MIMIC, where predicted "true positives" scored 0.387–0
 
 1. **n = 35 subjects.** The subject-AUROC CI is [0.908, 1.000]; quote the interval, never
    the point estimate alone.
-2. **Never validated on the project's own MAX30102 wrist hardware.** Training data is
-   fingertip transmissive ICU PPG. Measured transfer to wrist reflectance is poor (0.583).
-   This is the single largest gap between the thesis claim and the evidence, and no amount of
-   further modelling on MIMIC closes it — it needs data from the actual device.
+2. **Never validated on the project's own MAX30102.** Training data is bedside pulse-oximetry
+   PPG, almost certainly transmissive fingertip; the MAX30102 is a **reflectance** sensor, so
+   reflectance-vs-transmissive transfer is unmeasured. This is the single largest gap between
+   the thesis claim and the evidence, and no amount of further modelling on MIMIC closes it —
+   it needs data from the actual device, through the **fingertip housing, which is not built
+   yet**. Note also that MIMIC's documentation never states the measurement site: "finger" is
+   a strong inference from bedside pulse oximetry, not a documented fact, and should not be
+   written into Chapter 3 as though the dataset asserted it.
 3. **AF and non-AF subjects are different people.** The rate ablation addresses the most
    obvious confound; it cannot exclude all of them.
 4. **MIMIC labels are per-recording**, so a paroxysmal subject's sinus segments are labelled
@@ -307,9 +325,12 @@ chance-level model over MIMIC, where predicted "true positives" scored 0.387–0
 
 1. **Adviser decision on the dataset reversal** (§2) and the Chapter 2 amendment (§3). Both
    change written chapters. §1 and §3 are the evidence packs.
-2. **Collect labelled data from the actual MAX30102 wrist device.** This is the highest-value
-   remaining action for validity — item 2 of §8 cannot be closed any other way. Even a few
-   hours from consenting AF and non-AF subjects would allow a transfer measurement.
+2. **Collect labelled data from the actual MAX30102, at the fingertip.** This is the
+   highest-value remaining action for validity — item 2 of §8 cannot be closed any other way.
+   It is blocked on the **fingertip housing, which does not exist yet**: the committed
+   enclosure is the wrist one, now the secondary comparison. The CAD is parametric and the
+   sensor boss, light-seal ring and aperture logic reuse directly. Even a few hours from
+   consenting AF and non-AF subjects would allow the transfer measurement.
 3. **Hardware verification** (`PLAN.md` §7, still unchecked): ESP32-C3 into the Pi, restart
    both services, confirm a real waveform and a live `ibi_af_v1` decision.
 4. **Retire `cnn_af_v1.npz`** from the default path (done) and delete it once the adviser has

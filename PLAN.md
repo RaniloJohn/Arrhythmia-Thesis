@@ -400,6 +400,61 @@ Atomic checklist, in order. Each item is independently verifiable.
 
 ---
 
+## 10. Wrist enclosure — addendum, 2026-09-11
+
+The parametric CAD is written, validated and committed at `08 - Hardware/enclosure/`
+(CadQuery → STEP + STL); the files that go to the shop are in `08 - Hardware/print-ready/`.
+Design record:
+[[05 - Claude Notes/2026-09-11 - Wrist Enclosure Design Specification|Wrist Enclosure Design Specification]].
+Print-shop brief:
+[[05 - Claude Notes/2026-09-11 - Enclosure Print Order Brief|Enclosure Print Order Brief]].
+
+This is **not** an Antigravity implementation task — the geometry is done. It is listed
+here so the open items are not lost.
+
+- [x] Identify the module — **MH-ET LIVE MAX30102, 21 × 16 mm**, from the MakerLab PH
+      product photo. `MAX_VARIANT = "mhetlive"` is set and the enclosure builds.
+- [ ] Photograph the **front** (sensor side) flat next to a ruler and set `AP_DX`/`AP_DY`,
+      then clear `AP_PROVISIONAL` and return `AP_UNCERTAINTY` to `0.0`. The aperture
+      position is assumed centred right now and `build.py` warns on every build.
+- [ ] Note for the firmware, not the enclosure: the `1V8`/`3V3` pads on that board select
+      the I²C pull-up rail. Strapped to 1.8 V the sensor never answers a 3.3 V I²C scan.
+      If a replacement module ever reads as missing, check that jumper before the driver.
+- [ ] Order the Stage-1 gauges from the print shop. **Does not block on the item above** —
+      the optical aperture is a property of the MAX30102 chip package, not the breakout.
+- [ ] Set `CLEARANCE` from whichever gauge column gives a firm slip fit, then order the
+      enclosure itself.
+- [ ] Standing warning from `build.py`: the strap tunnel is now 33 mm deep, so the band
+      emerges near the lid and levers the device off the wrist. Rework the end blocks into
+      low side lugs before printing if the wrist path is kept.
+
+Do not delete a check in `build.py` to make a build pass. Several of them caught real
+defects — see the spec note.
+
+## 11. Carried over from the superseded post-bring-up plan
+
+§8 absorbed the honesty guards and the training handoff. These three items were in the
+2026-09-10 post-bring-up plan, were **not** covered by §8, and are still open.
+
+- [ ] **Calibrate the SQI gate against ground truth.** `MIN_SQI_SCORE = 0.7` and
+      `CONTACT_IR_THRESHOLD = 50000` were both picked by eye during bring-up. DeepBeat's
+      `qa_label` is a 3-class human-labelled signal-quality ground truth over the same
+      signal type — use it to choose defensible values and report the sensitivity and
+      specificity of the gate itself. Record the result as an ADR.
+- [ ] **Data cleanup** (order matters, or the edge service will not start): create a real
+      patient through the dashboard, repoint `TARGET_PATIENT_ID` in
+      `/home/ranilo/.config/arrhythmia/edge.env` at it, and only then purge the 3 seeded
+      patients, the bring-up noise events, **and the two compromised `users` rows** —
+      `03 - ML/scripts/purge_synthetic_data.py` does not currently touch `users`. The
+      SHA-256 chain cannot be patched after deletion; reinitialise from genesis and
+      re-verify via `/api/events/verify/chain`. Surface the exact commands for review
+      before running anything against the live database.
+- [ ] **Correct `ANTIGRAVITY.md` §5.** The Performance Efficiency row still claims
+      "inference ~13.08 ms", measured on synthetic data. The real re-benchmarked figure is
+      **16.39 ms mean / 18.43 ms p95** over 100 windows, inside the 25 ms budget. Update
+      the Functional Suitability row too — it can now cite measured numbers, but must cite
+      the external MIMIC and cross-validated bounds alongside the internal sensitivity.
+
 ## Explicitly out of scope for this pass
 
 - Hyperledger Fabric sync worker — already scoped separately in ADR-001 /

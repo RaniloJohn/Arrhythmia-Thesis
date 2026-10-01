@@ -71,9 +71,15 @@ rate-confound was tested: rate-free features give 0.914, rate-only 0.674, so the
 interval irregularity (the AF mechanism), not heart rate.
 
 **The limit, which must be stated in the thesis:** it was trained on MIMIC PERform AF —
-**fingertip transmissive ICU PPG at 125 Hz — and has never been validated on this project's
-own MAX30102 wrist sensor.** Measured transfer to wrist reflectance PPG is poor (subject
-AUROC 0.583). No further modelling on MIMIC closes this; it needs data from the real device.
+bedside pulse-oximetry PPG at 125 Hz, almost certainly **transmissive fingertip** — and has
+**never been validated on this project's own MAX30102**, which is a **reflectance** sensor.
+Since the team's 2026-09-11 decision moves the primary measurement site to the fingertip, the
+remaining gap is **reflectance vs transmissive at a matching site**, which is real but far
+smaller than the wrist-vs-finger gap. The measured 0.583 transfer figure is to *wrist*
+reflectance (DeepBeat) and now describes the **secondary** wrist comparison, not the primary
+deployment. No further modelling closes this; it needs data from the real device.
+Also note MIMIC's own external-validity limit: 35 critically-ill ICU adults, not a
+primary-care screening cohort.
 
 **The 1D-CNN remains unvalidated and `cnn_af_v1.npz` must never be cited.** The Chapter 2
 topology has a 0.12 s receptive field, so no convolutional feature can observe even one
@@ -115,8 +121,15 @@ Rebuild + evidence packs: `02 - Code Review/2026-10-01 - ML Rebuild - Working AF
    match the MAX30102, **32 Hz cannot resolve AF** — one sample is 31 ms against the 50 ms
    pNN50 criterion. Decisive test: a 3-parameter irregularity model scores subject AUROC
    **0.914 on MIMIC and 0.465 (chance) on DeepBeat**. No feature set or architecture found
-   usable signal in DeepBeat. **Owed to the adviser** along with decision 11; evidence pack
-   is §1 of the 2026-10-01 rebuild note.
+   usable signal in DeepBeat. **Independently corroborated:** the team's own 2026-09-11
+   sensing decision (`05 - Claude Notes/2026-09-11 - Wrist vs Fingertip Sensing - SOP and RRL
+   Alignment.md`) had already moved the primary measurement site to the **fingertip** and
+   named MIMIC PERform AF as the matching corpus — on entirely separate grounds (DeepBeat
+   publishes no reference ECG, so it is unbenchmarkable; the device is a tethered screening
+   instrument, not a continuous wearable). Two independent lines of reasoning converge, which
+   makes this a much easier case to the adviser than decision 11. It also **erases the Ch. 3
+   documentation debt** rather than adding to it: Chapter 2 and §4.3 already name MIMIC
+   PERform. Evidence pack is §1 of the 2026-10-01 rebuild note.
 
 10. **Train in PyTorch, infer in NumPy.** Torch is a dev-machine-only dependency; the Pi
    runtime stays pure NumPy, so Decision 4 is intact. Weights cross the boundary as an
@@ -155,18 +168,24 @@ Rebuild + evidence packs: `02 - Code Review/2026-10-01 - ML Rebuild - Working AF
 Resolved items are deleted, not archived, so stale figures cannot be re-quoted from here.
 
 **Blocking the thesis claim**
-- [ ] **HIGHEST VALUE — collect labelled data from the project's own MAX30102 wrist device.**
-      `ibi_af_v1` is trained on fingertip transmissive ICU PPG; measured transfer to wrist
-      reflectance is poor (subject AUROC 0.583). This is the largest gap between what the
-      thesis claims and what has been measured, and **no further modelling closes it.** Even
-      a few hours from consenting AF and non-AF subjects enables a transfer measurement.
+- [ ] **HIGHEST VALUE — collect labelled data from the project's own MAX30102.** `ibi_af_v1`
+      is trained on transmissive bedside PPG; the MAX30102 is a reflectance sensor, so
+      reflectance-vs-transmissive transfer is unmeasured. Per the 2026-09-11 decision the
+      primary site is now the **fingertip**, so this needs the **fingertip housing, which is
+      not built yet** (the committed enclosure is the wrist one, retained as the secondary
+      comparison). Even a few hours from consenting AF and non-AF subjects enables the
+      transfer measurement. **No further modelling closes this gap.**
+- [ ] **Fingertip housing not yet designed/printed.** The 2026-09-11 decision makes fingertip
+      primary and the wrist enclosure a secondary comparison, but only the wrist part exists.
+      The CAD is parametric and the sensor boss / light-seal / aperture logic reuses directly.
 - [ ] **Adviser sign-off on two reversals** — settled decisions **9** (dataset roles) and
       **11** (Ch. 2 topology amendment + the deployed classifier not being a CNN). Evidence
       packs: §1 and §3 of `02 - Code Review/2026-10-01 - ML Rebuild - ...`.
-- [ ] **Ch. 3 amendment.** The chapter's original naming of MIMIC PERform as the training
-      dataset is *correct again* after the reversal; what needs rewriting is the
-      justification (≥100 Hz sampling requirement, per-recording labels) and DeepBeat's new
-      role as a cross-sensor robustness cohort.
+- [ ] **Ch. 3 amendment (small).** The chapter's naming of MIMIC PERform as the training
+      dataset is *correct again* after the reversal, so there is no dataset debt. What needs
+      writing is the justification (≥100 Hz sampling requirement, per-recording labels,
+      ECG-verifiable labels) and DeepBeat's demotion to a secondary wrist comparison. Add the
+      MIMIC external-validity caveat (35 critically-ill ICU adults) to Ch. 1 Limitations.
 
 **Engineering / deployment**
 - [ ] **Hardware verification** (`PLAN.md` §7): ESP32-C3 into the Pi, restart both services,
