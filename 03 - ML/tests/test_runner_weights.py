@@ -69,35 +69,55 @@ def test_missing_weights_fallback_warning(capsys, monkeypatch):
         assert runner.model.weights_loaded is False
 
 
-def test_telemetry_payload_schema_and_consensus(repo_weights_path):
-    """Test that process_window emits full telemetry including consensus and weights state."""
-    runner = EdgeInferenceRunner(weights_path=repo_weights_path)
+def _prefilled_runner(**kwargs):
+    runner = EdgeInferenceRunner(**kwargs)
     gen = SyntheticPPGGenerator(fs=100.0)
-
-    # Prefill buffer to 1000 samples
     for _ in range(1000):
         s = gen.next_sample()
         runner.raw_ir_buffer.append(s["ir_raw"])
         runner.raw_red_buffer.append(s["red_raw"])
         runner.timestamps_buffer.append(s["timestamp_ms"])
     runner.sample_count = 1000
+    return runner
 
+
+def test_telemetry_payload_schema_and_consensus(repo_weights_path):
+    """
+    Default classifier is the validated IBI model, so telemetry must identify *it*, not the
+    1D-CNN. Updated 2026-10-01: this test previously asserted `cnn_af_v1`/`deepbeat`, which
+    is the behaviour the audit found unsafe to ship — `model_trained` was true for a
+    chance-level model.
+    """
+    runner = _prefilled_runner(weights_path=repo_weights_path)
     payload = runner.process_window()
     assert payload is not None
-    assert "af_detected" in payload
-    assert "af_consensus" in payload
-    assert "af_probability" in payload
-    assert "weights_loaded" in payload
-    assert "model_trained" in payload
-    assert "model_version" in payload
-    assert "training_dataset" in payload
-    assert "decision_threshold" in payload
+    for key in ("af_detected", "af_consensus", "af_probability", "weights_loaded",
+                "model_trained", "model_version", "training_dataset",
+                "decision_threshold", "classifier", "explanation",
+                "model_validated_subject_auroc"):
+        assert key in payload, f"missing telemetry key {key!r}"
 
+    assert payload["classifier"] == "ibi"
     assert payload["weights_loaded"] is True
-    assert payload["model_trained"] is True
-    assert payload["model_version"] == "cnn_af_v1"
-    assert payload["training_dataset"] == "deepbeat"
-    assert payload["decision_threshold"] == pytest.approx(0.37, abs=0.01)
+    assert payload["model_version"] == "ibi_af_v1"
+    assert payload["training_dataset"] == "mimic_perform_af"
     assert payload["af_detected"] in (0, 1)
     assert payload["af_consensus"] in (0, 1)
     assert payload["latencies"]["inference_ms"] < 25.0
+
+    # model_trained must mean "validated above a measured skill floor"
+    assert payload["model_trained"] is True
+    assert payload["model_validated_subject_auroc"] >= 0.70
+
+
+def test_cnn_path_is_reported_as_unvalidated(repo_weights_path):
+    """
+    The 1D-CNN path stays available for comparison but must never claim to be validated,
+    however loadable its weights are. This is the honesty regression the audit flagged.
+    """
+    runner = _prefilled_runner(weights_path=repo_weights_path, classifier="cnn")
+    payload = runner.process_window()
+    assert payload["classifier"] == "cnn"
+    assert payload["model_trained"] is False
+    assert payload["model_validated_subject_auroc"] is None
+    assert payload["decision_threshold"] == pytest.approx(0.37, abs=0.01)

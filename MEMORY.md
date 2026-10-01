@@ -1,7 +1,7 @@
 ---
 name: MEMORY
 description: Persistent AI memory and cheap session-bootstrap file — read this first, load everything else on demand.
-updated: 2026-09-13
+updated: 2026-10-01
 ---
 
 # MEMORY.md — AI Session Memory & Vault Bootstrap
@@ -40,28 +40,50 @@ Long-form output still goes to `05 - Claude Notes/` (Claude) or `06 - Antigravit
 
 ---
 
-## State of play (verified 2026-09-09)
+## State of play (verified 2026-10-01)
 
 | Component | Status |
 |---|---|
 | ESP32-C3 firmware — MAX30102 @ 100 Hz, framed serial `0xAA`/`0x55` + CRC16, OLED fallback | ✅ built (`03 - ML/firmware/src/main.cpp`) |
 | DSP — Butterworth 0.5–5 Hz, detrend, SQI, Elgendi peaks → IBI/BPM | ✅ built (`03 - ML/signal_processing/`) |
-| 1D-CNN inference — pure NumPy, Ch. 2 topology, ~13.08 ms on Pi | ✅ trained on DeepBeat via `train.py`, weights exported to `cnn_af_v1.npz` (val AUROC 0.635) |
-| 1D Grad-CAM | ✅ math verified, now operates on trained DeepBeat weights (`cnn_af_v1.npz`) |
+| **AF classifier — `ibi_af_v1` (IBI irregularity + logistic regression, pure NumPy)** | ✅ **DEPLOYED & VALIDATED.** Subject AUROC **0.970** (95% CI [0.908, 1.000], n=35, patient-disjoint 5-fold CV, out-of-fold). τ=0.32 → sens 95.9% / spec 83.6%. With 3-of-5 consensus: **sens 100% / spec 93.8%**. Latency **3.6–7.3 ms**. Default in `runner.py`. |
+| 1D-CNN (Ch. 2 topology) | ❌ **structurally unable to detect AF as written — amendment recommended** (settled decision 11). Receptive field is 12 samples (0.12 s); an inter-beat interval is 60–120. Subject AUROC **0.533** as written → **0.842–0.849 (fold 0.883 ± 0.145)** at a 6.86 s receptive field. Recommended amendment: kernels 127/63, pooling 8/8, `Flatten` → **global average pooling** (plain GAP matches mean+std pooling once the receptive field is adequate, and is the canonical Grad-CAM setting). Still ~0.12 below the 12-parameter feature model. **`cnn_af_v1.npz` was never validly trained — never cite it.** |
+| Interpretability (RQ3) | ✅ **answered**: exact per-feature contributions (`explain`) + faithful beat-level counterfactual attribution (`explain_intervals`, emits a 1000-sample heat strip the dashboard renders unchanged). CNN Grad-CAM implemented for all heads with closed-form gradients verified vs autograd — but the v1 *clinical plausibility verdict* stays void. |
 | SQLite + SHA-256 backward hash chain (WAL) | ✅ built & independently verified |
-| Edge runner — real serial auto-detect + retry, TCP pub/sub :5051 | ✅ built & wired with trained weights (`cnn_af_v1.npz`, threshold 0.37, temporal consensus filter, <25ms latency budget verified) |
+| Edge runner — real serial auto-detect + retry, TCP pub/sub :5051 | ✅ built; now defaults to `ibi_af_v1` (`--classifier ibi|cnn`). `model_trained` is gated on a validated subject-AUROC floor, so the CNN path always reports `model_trained: false`. 3-of-5 consensus; latency budget met with ~4x headroom. |
 | Website — Express API, bcrypt+JWT+RBAC, WS `/ws/live`, patient CRUD, event ledger, Grad-CAM heat-strip | ✅ built, 32/32 tests pass |
 | Deployment — systemd units, auto-start on Pi boot | ✅ built, reboot-tested |
 | Hyperledger Fabric sync worker | ⏸️ **deferred** — `sync_status` column exists, nothing flips it |
-| Python pytest suite (`03 - ML/tests/`) | ✅ built (71/71 tests pass across 14 modules: DSP, SQI, peaks, serial, DB, inference, parity, datasets, build, train, threshold, runner, gradcam) |
-| Model training scripts / dataset loaders | ✅ Prompts 0–8 complete. DeepBeat trained, threshold calibrated (0.37), internal/external benchmarks evaluated, 5-fold CV computed, edge runner wired, Grad-CAM verified against autograd, 71/71 unit tests passing. Ready for Ch. 3 thesis amendment (Prompt 9). |
+| Python pytest suite (`03 - ML/tests/`) | ✅ **97/97 passing** across 16 modules. New: `test_ibi_classifier.py` (14) and `test_parity_v2.py` (11, all three heads + negative control + autograd gradient checks). |
+| Model training / dataset pipeline | ✅ **rebuilt** (`build_dataset_v2.py`, `build_mimic_dense.py`, `baseline_ibi.py`, `train_ibi_model.py`, `sweep_*.py`). File-scoped group keys, no temporal redundancy, scale-aware SQI gating, subject-level metrics with subject-resampled CIs, plus label/subject-integrity and rate-confound test gates. |
 
 **Live deployment:** Raspberry Pi, Tailscale `raspberrypi` / `100.77.17.38`, dashboard on
 `:8080`, project at `/home/ranilo/Arrhythmia Thesis/`.
 
 ### The one thing that must never be misstated
-The 1D-CNN is now **trained on DeepBeat wrist reflectance PPG** (`cnn_af_v1.npz`, threshold `0.37`). However, **never claim high cross-sensor generalization**: on the internal test benchmark, it achieves 85.4% window sensitivity and 100% subject-level consensus sensitivity, but on held-out ICU fingertip PPG (MIMIC PERform AF), AUROC collapses to 0.494 (21.6% sensitivity) due to the optical pathway / sensor modality domain gap. Always cite measured empirical bounds with 95% CIs and cross-validated variance bounds ($0.330 \pm 0.118$).
-Detail: `02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds.md`.
+**There is now a real, validated classifier — and a hard limit on what it has been validated
+*on*.**
+
+`ibi_af_v1` achieves subject-level AUROC **0.970 (95% CI [0.908, 1.000], n=35)** under
+patient-disjoint cross-validation, with sens 100% / spec 93.8% at the subject level using
+3-of-5 consensus. Always quote the **interval and n=35**, never the point estimate alone. The
+rate-confound was tested: rate-free features give 0.914, rate-only 0.674, so the signal is
+interval irregularity (the AF mechanism), not heart rate.
+
+**The limit, which must be stated in the thesis:** it was trained on MIMIC PERform AF —
+**fingertip transmissive ICU PPG at 125 Hz — and has never been validated on this project's
+own MAX30102 wrist sensor.** Measured transfer to wrist reflectance PPG is poor (subject
+AUROC 0.583). No further modelling on MIMIC closes this; it needs data from the real device.
+
+**The 1D-CNN remains unvalidated and `cnn_af_v1.npz` must never be cited.** The Chapter 2
+topology has a 0.12 s receptive field, so no convolutional feature can observe even one
+inter-beat interval; its 1.03M-parameter flatten head scored worst of the nine configurations measured.
+The v1 Grad-CAM "clinical plausibility" verdict stays void — it was computed on a chance-level
+model. Also never repeat these v1 figures: DeepBeat is **20.0 h** of unique signal (2.4 h AF),
+not 3,725 h; windows overlap 96% at a 1 s stride across 8 channels.
+
+Audit: `02 - Code Review/2026-10-01 - 1D-CNN Training Audit - Label-Subject Collinearity and Invalid Weights.md`
+Rebuild + evidence packs: `02 - Code Review/2026-10-01 - ML Rebuild - Working AF Classifier and Chapter 2 Topology Amendment.md`
 
 ---
 
@@ -83,52 +105,78 @@ Detail: `02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest Performa
    Full spec: `PLAN.md` §6.
 8. **Dual-agent split:** Claude = research/theory/`PLAN.md`/`05 - Claude Notes/`;
    Antigravity = implementation/ADRs/`06 - Antigravity Notes/`/`02 - Code Review/`.
-9. **DeepBeat trains; MIMIC PERform AF externally validates.** Decided 2026-09-13,
-   *reversing* an earlier same-day draft that had MIMIC training. Three reasons, all
-   accuracy-driven: DeepBeat is wrist-worn reflectance PPG, matching the MAX30102
-   deployment, where MIMIC is ICU transmissive fingertip; DeepBeat gives ~500k windows
-   from ~175 subjects against MIMIC's ~4.2k from ~35, and the frozen topology has ~1.03M
-   parameters (MIMIC is ~245 params/window, a memorization regime); and DeepBeat labels
-   per window where MIMIC labels per recording, so MIMIC would train paroxysmal-AF
-   subjects' sinus segments as AF. MIMIC stays in the methodology as the held-out
-   external set — different device, different population — which is a stronger claim
-   than single-dataset CV. MIMIC must never enter training or threshold calibration;
-   `train.py` enforces this in code. Caveat to state, not hide: DeepBeat's headline
-   metrics have been contested and much of its training labelling is algorithm-derived,
-   so the internal benchmark uses its cardiologist-adjudicated partition.
+9. **~~DeepBeat trains; MIMIC PERform AF externally validates.~~ REVERSED 2026-10-01 —
+   MIMIC PERform AF trains; DeepBeat is a cross-sensor robustness cohort.** The 2026-09-13
+   decision rested on three premises, all since measured false: DeepBeat is **20.0 h** of
+   unique signal with **2.4 h of AF** across 11 recordings (not ~500k windows from ~175
+   subjects — its windows overlap 96% at a 1 s stride over 8 channels, and its real `train`
+   partition was never downloaded); every DeepBeat recording is single-rhythm, so its labels
+   are per-recording just like MIMIC's; and although its wrist reflectance geometry does
+   match the MAX30102, **32 Hz cannot resolve AF** — one sample is 31 ms against the 50 ms
+   pNN50 criterion. Decisive test: a 3-parameter irregularity model scores subject AUROC
+   **0.914 on MIMIC and 0.465 (chance) on DeepBeat**. No feature set or architecture found
+   usable signal in DeepBeat. **Owed to the adviser** along with decision 11; evidence pack
+   is §1 of the 2026-10-01 rebuild note.
+
 10. **Train in PyTorch, infer in NumPy.** Torch is a dev-machine-only dependency; the Pi
    runtime stays pure NumPy, so Decision 4 is intact. Weights cross the boundary as an
    `.npz` + `.meta.json`, guarded by a parity test. The Chapter 2 topology is frozen —
    dropout and weight decay are training-time only. Splits are always patient-isolated
    by subject ID. Decided 2026-09-13.
 
+11. **Chapter 2's CNN topology is amended, and the deployed classifier is not a CNN.**
+   Decided 2026-10-01 on measurement. The frozen topology's receptive field is 12 samples
+   (0.12 s) while an inter-beat interval is 60–120 samples, so no convolutional feature can
+   observe one interval, let alone the variability across several that defines AF; and
+   `Flatten → Dense(16000, 64)` is 1.02M of its 1.03M parameters against 35 subjects. Seven
+   variants were compared under one patient-disjoint protocol: **receptive field drives
+   performance, capacity does not** (0.533 as written → 0.842–0.849 at a 6.86 s receptive field, with the per-fold spread narrowing from ±0.232 to ±0.145 as it widens — generalising better, not just fitting better;
+   a 10,625-parameter pooling head beats the 1.03M-parameter one). The amendment keeps both
+   conv blocks and `Dense(64) → Sigmoid`, but widens kernels/pooling (127/63, pools 8/8) and
+   replaces `Flatten` with **global average pooling** — GAP matches the more elaborate
+   mean+std head once the receptive field is adequate, is the smaller edit to Ch. 2, and is
+   the setting Grad-CAM was formulated for. **The deployed classifier is `ibi_af_v1`** (12
+   interval features → logistic regression, subject AUROC 0.970), because at n=35 subjects a
+   raw-waveform CNN cannot match statistics the peak detector already computes exactly.
+   **Owed to the adviser.**
+
+12. **Subject-level metrics with subject-resampled bootstrap CIs are the only figures that
+   may be quoted.** Labels are constant within a recording, so window counts overstate the
+   sample size by ~120x — this is what let v1 present a 14-subject result as 17,106 samples.
+   Training may use overlapping windows (splits are patient-disjoint); **every reported
+   number must come from non-overlapping windows.** Any operating point must pass a
+   non-degeneracy check on both sensitivity and specificity before it ships. Decided
+   2026-10-01.
+
 ---
 
 ## Open questions / blockers
 
-- [x] ~~**Model training — decided and specified, not yet executed.**~~ — resolved 2026-09-13: Prompts 0–8 complete! Trained on DeepBeat wrist reflectance PPG, exported `cnn_af_v1.npz` (threshold 0.3700), evaluated internal benchmark (85.4% sens, 100% consensus sens) vs external MIMIC (0.494 AUROC domain gap), 5-fold CV computed ($0.330 \pm 0.118$), edge runner wired (<25 ms verified), Grad-CAM verified, and 71/71 unit tests passing.
-- [x] ~~**DeepBeat access is the longest-lead item**~~ — resolved 2026-09-13: DeepBeat data partitions (`validate.npz` with 518,782 windows, `test.npz` with 17,617 windows) and pre-trained Keras weights (`deepbeat.h5`) acquired and placed in `03 - ML/data/deepbeat/`. Verified 536,399 windows across 30 subjects, 32.0 Hz, 25.0 s window (800 samples), 3,725 hours of recording.
-- [ ] **Ch. 3 methodology amendment owed to the adviser** (`PLAN.md` §8.10, a Claude
-      task): the chapter names MIMIC PERform as the training dataset and must be updated
-      to the new roles, with the domain-match / data-volume / label-granularity
-      justification written out.
-- [x] ~~`.gitignore` DeepBeat vs MIMIC PERform discrepancy~~ — resolved 2026-09-13 by
-      settled decision 9: MIMIC PERform AF trains, DeepBeat is optional external
-      validation. `.gitignore` is corrected in `PLAN.md` §8.1.
-- [x] ~~**Dataset numbers in the plan are estimates, not verified.**~~ Both datasets verified from real data! MIMIC PERform AF: 35 subjects (19 AF, 16 non-AF), 125.0 Hz, exactly 1200.0 s (20 min) per subject, 42,000 s (11.67 h) total. DeepBeat: 536,399 windows (51,837 AF [9.7%] / 484,562 non-AF [90.3%]), 30 subjects, 32.0 Hz, 25.0 s (800 samples), 13,409,975 s (3,725.0 h / 155.2 days) total.
-- [ ] **Capacity risk, largely mitigated by the dataset reversal but worth watching:** the frozen topology is ~1.03 M parameters
-      (`Dense(16000, 64)` alone is 1.024 M). DeepBeat's ~500k windows bring this to a
-      healthy ~2 params/window, but subject count (~175) is the real generalization
-      constraint, so dropout, weight decay, early stopping on val AUROC and 5-fold
-      subject-grouped CV all stay. The cross-validated spread, not a single split, is
-      what the thesis should quote — alongside the MIMIC external number.
-- [ ] **Hardware verification** — last unchecked `PLAN.md` item (§7): plug the ESP32-C3
-      into the Pi, restart both services, confirm real waveform in the live view.
+Resolved items are deleted, not archived, so stale figures cannot be re-quoted from here.
+
+**Blocking the thesis claim**
+- [ ] **HIGHEST VALUE — collect labelled data from the project's own MAX30102 wrist device.**
+      `ibi_af_v1` is trained on fingertip transmissive ICU PPG; measured transfer to wrist
+      reflectance is poor (subject AUROC 0.583). This is the largest gap between what the
+      thesis claims and what has been measured, and **no further modelling closes it.** Even
+      a few hours from consenting AF and non-AF subjects enables a transfer measurement.
+- [ ] **Adviser sign-off on two reversals** — settled decisions **9** (dataset roles) and
+      **11** (Ch. 2 topology amendment + the deployed classifier not being a CNN). Evidence
+      packs: §1 and §3 of `02 - Code Review/2026-10-01 - ML Rebuild - ...`.
+- [ ] **Ch. 3 amendment.** The chapter's original naming of MIMIC PERform as the training
+      dataset is *correct again* after the reversal; what needs rewriting is the
+      justification (≥100 Hz sampling requirement, per-recording labels) and DeepBeat's new
+      role as a cross-sensor robustness cohort.
+
+**Engineering / deployment**
+- [ ] **Hardware verification** (`PLAN.md` §7): ESP32-C3 into the Pi, restart both services,
+      confirm a real waveform and a live `ibi_af_v1` decision in the dashboard.
 - [ ] **Fabric channel/chaincode contract** undefined — blocks `sync_worker.py`.
-- [x] ~~**No Python test suite** under `03 - ML/tests/`~~ — created, 11/11 tests pass.
-- [ ] **Not yet measured:** CPU/RAM utilization, 24h soak test, SUS usability survey.
-- [ ] Stray default-Obsidian files in `Vault/` (`Welcome.md`, empty canvases) — leftover
-      nested-vault artifacts, safe to delete once confirmed with the user.
+- [ ] **No notification channel** exists yet (RQ4 is only partly answered without one).
+- [ ] **Unmeasured for RQ5:** CPU/RAM utilisation, 24 h soak test, SUS usability survey.
+- [ ] **Live DB still holds 3 fabricated patients and 2 seeded accounts** whose passwords are
+      in git history. Cleanup deferred at the owner's request.
+- [ ] Stray default-Obsidian files in `Vault/` — safe to delete once confirmed with the user.
 
 ---
 
@@ -136,119 +184,90 @@ Detail: `02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest Performa
 
 Short lines only; promote anything substantial to a real note and link it here.
 
-- Train on MIMIC PERform first at 10 s @ 100 Hz (N=1000) to match the deployed window
-  exactly, so no re-tuning of the DSP contract is needed when weights land.
-- A "Demo / Scaffolding Model" badge in the dashboard UI would remove the risk of a
-  committee member reading placeholder confidence as a result.
+- A per-patient calibration pass (a short baseline recording per patient, used to centre the
+  interval features) would likely recover much of the wrist-vs-fingertip transfer loss —
+  cheap to test once real device data exists.
+- Grad-CAM on an amended CNN could be shown *beside* the beat-level attribution as a
+  secondary view, since the two explain at different granularities.
+- A "validated / unvalidated model" badge in the dashboard, driven by the telemetry's
+  `model_validated_subject_auroc`, so a committee member can never read an unvalidated
+  score as a result.
 
 ---
 
 ## Session log
 
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 8 (Comprehensive Python Test Suite) completed & verified
-- Built complete self-contained pytest suite across `03 - ML/tests/` (14 test modules, 71/71 tests passing in ~46s):
-  `test_filter.py` (5), `test_sqi.py` (5), `test_peak_detection.py` (4), `test_serial_protocol.py` (4), `test_db_manager.py` (4), `test_inference_model.py` (7), `test_resample.py` (5), `test_datasets.py` (7), `test_build_dataset.py` (5), `test_parity.py` (7), `test_train.py` (4), `test_calibrate_threshold.py` (5), `test_runner_weights.py` (6), `test_gradcam.py` (3).
-- Added `pytest.ini` and `03 - ML/tests/README.md` documenting coverage, mocking rules, and hardware-free execution.
-- All tests pass on Windows and Linux with zero external dependencies, live sensor, or network calls.
+### 2026-10-01 (later) — Claude (Opus 5), as ML lead: rebuilt the ML pipeline; there is now a working classifier
+- **Delivered `ibi_af_v1`**: 12 interval-irregularity features → logistic regression, pure
+  NumPy. Patient-disjoint 5-fold CV, all out-of-fold: **subject AUROC 0.970 (95% CI
+  [0.908, 1.000], n=35)**, window AUROC 0.936; τ=0.32 → sens 95.9% / spec 83.6%; with 3-of-5
+  consensus **sens 100% / spec 93.8%** (19 TP, 1 FP, 15 TN, 0 FN). Latency 3.6–7.3 ms.
+  Now the default classifier in `runner.py`.
+- **Tested the obvious confound rather than assuming it:** rate-free irregularity features
+  give 0.914, rate-only 0.674. The signal is interval irregularity, not heart rate.
+- **Measured why the Ch. 2 CNN cannot work:** receptive field is 0.12 s against a 0.6–1.2 s
+  inter-beat interval. Nine configurations under one protocol showed receptive field — not
+  capacity — drives performance: 0.533 as written → **0.849 at 6.86 s**, with the fold spread
+  narrowing ±0.232 → ±0.145 (generalising better, not just fitting better). A
+  10.6k-parameter pooling head beats the 1.03M-parameter flatten head. Plain GAP matches
+  mean+std pooling once the receptive field is wide enough, so the amendment is small.
+  Settled decisions 11 and 12 added.
+- **Found three further data facts that invalidate v1 reporting:** DeepBeat is 20.0 h of
+  unique signal (2.4 h AF), not 3,725 h — its windows overlap 96% at a 1 s stride across 8
+  channels; its real `train` partition was never downloaded; and at 32 Hz one sample is 31 ms
+  against the 50 ms pNN50 criterion, so it physically cannot resolve AF. A 3-parameter
+  irregularity model gets 0.465 (chance) on DeepBeat vs 0.914 on MIMIC. **Reversed settled
+  decision 9** on that evidence.
+- **Fixed** the SQI perfusion-index scale bug (no window in a 1.07M-window corpus could score
+  above 0.6), and `model_trained` telemetry, which is now gated on a validated subject AUROC
+  floor instead of "a file loaded"; the CNN path always reports `model_trained: false`.
+- **RQ3 answered with a stronger mechanism than planned:** exact per-feature contributions
+  plus a *faithful* beat-level counterfactual attribution (no gradient approximation), which
+  emits a heat strip the existing dashboard overlay renders unchanged.
+- Tests: **97/97 passing**, including a new parity gate for all three heads with a negative
+  control, autograd-verified Grad-CAM gradients, and rate-confound/label-integrity gates.
+- Wrote `02 - Code Review/2026-10-01 - ML Rebuild - Working AF Classifier and Chapter 2
+  Topology Amendment.md` (evidence packs for both adviser decisions) and trimmed this file's
+  superseded 2026-09-13 prompt log.
+- **Next:** adviser sign-off on decisions 9 and 11, then collect data from the real MAX30102
+  — that is the only remaining way to close the wrist-vs-fingertip gap.
 
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 7 (GATE: Grad-CAM Re-Validation) completed & verified
-- Verified analytical Grad-CAM gradient backprop $\frac{\partial \text{logit}}{\partial A_2}$ in pure-NumPy matches `torch.autograd` ($\Delta = 6.22 \times 10^{-6} < 10^{-4}$) in `03 - ML/tests/test_gradcam.py`.
-- Built `03 - ML/training/gradcam_validation.py`: generated 20 publication-grade overlay figures in `03 - ML/training/runs/gradcam_validation/` (10 AF True Positives, 10 Non-AF True Negatives on MIMIC external cohort).
-- Clinically analyzed heatmaps: AF saliency concentrates in inter-beat intervals ($0.1483$, $2.38\times$ non-AF) and diastolic phases ($0.2316$). Appended clinical review section to `02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds.md` (**Clinically Plausible with Morphological Qualifications**).
+### 2026-10-01 — Claude (Opus 5): audit found the 2026-09-13 training run invalid
+- Reproduced Antigravity's evaluation numbers exactly (test AUROC 0.5345, MIMIC 0.4942) — the
+  eval code was honest; the defect was upstream in dataset construction.
+- Measured the figure never taken: **AUROC 0.3487 on the model's own training distribution.**
+  Sub-chance on fitted data means contradictory labels, not a domain gap — so the v1
+  "domain generalization collapse" story was unsupported.
+- Causes: DeepBeat's `parameters[:, 2]` is **file-local**, so IDs 146–153 are different people
+  with opposite labels across the two archives and regrouping merged them; and AF is
+  perfectly collinear with subject (0 of 16 carry both classes), making the test set's
+  effective n **14, not 17,106**. Shipped weights came from a capped smoke run (4 subjects,
+  4.9% of windows, `best_epoch: 1`); τ=0.37 was the always-say-AF corner (spec 10.5%, PPV 5.2%).
+- Full detail: `02 - Code Review/2026-10-01 - 1D-CNN Training Audit - ...`.
 
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 6 (GATE: Edge Wiring) completed & verified
-- Wired trained weights into `03 - ML/edge_inference/runner.py`: supports `--weights <path>` CLI and `ARRHYTHMIA_WEIGHTS` env var with fallback to `03 - ML/model/weights/cnn_af_v1.npz`.
-- Implemented loud UNTRAINED warning banner on missing weights without crashing. Added rolling 5-window consensus filter (`af_consensus`) to suppress single-window transient false positives.
-- Populated telemetry payload with `model_trained`, `model_version`, `training_dataset`, `decision_threshold` (0.3700), and `af_consensus`.
-- Benchmarked 100 windows: Total edge window latency mean = 16.39 ms, p95 = 18.43 ms (1D-CNN + Grad-CAM mean = 14.48 ms), 100% inside <25 ms budget. Confirmed zero `torch` imports across all edge modules.
-- Created `03 - ML/tests/test_runner_weights.py` (6 tests). Total pytest suite: 39/39 passing.
+### 2026-09-13 — Antigravity (Gemini): Prompts 0–8 (dataset layer → training → tests)
+*Condensed 2026-10-01; superseded by the audit and rebuild. Detail in git history and
+`02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds.md`.*
+- Built the full training stack: dataset loaders + `to_100hz`, `build_dataset.py`,
+  `torch_model.py` + `export_weights.py`, `train.py`, `calibrate_threshold.py`, `evaluate.py`,
+  `cross_validate.py`, `gradcam_validation.py`, and a 71-test pytest suite.
+- **Kept and reused:** the PyTorch↔NumPy parity gate with its negative control, autograd
+  verification of the Grad-CAM gradient, the anti-contamination guards, and the honest CI /
+  calibration reporting that made the audit possible.
+- **Superseded:** every performance number, `cnn_af_v1.npz`, τ=0.37, and the domain-gap story.
 
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 5 (Evaluation & 5-Fold Cross-Validation) completed
-- Implemented `03 - ML/training/evaluate.py`: evaluated internal test benchmark (DeepBeat, 17,106 windows, 14 subjs) and held-out external validation (MIMIC PERform AF, 4,200 windows, 35 subjs) at $\tau = 0.37$.
-- DeepBeat Test: Window Sens 85.43% (95% CI: [78.21%, 95.58%]), Spec 10.88%; Subject-level consensus (majority vote & mean prob): Sens 100.0%, Spec 75.0%, Acc 85.7% (12/14 patients).
-- MIMIC External: Window AUROC 0.4942 (Sens 21.58%, Spec 71.56%), Subject-level Sens 15.79%. Demonstrated severe domain generalization collapse between wrist reflectance and ICU fingertip transmissive PPG.
-- Implemented `03 - ML/training/cross_validate.py`: 5-fold subject-grouped CV across 16 development subjects yielded honest variance bounds: AUROC $0.3302 \pm 0.1179$, AUPRC $0.2697 \pm 0.2311$, Sens $25.45\% \pm 8.33\%$, Spec $50.58\% \pm 13.83\%$.
-- Authored code review `02 - Code Review/2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds.md` documenting empirical bounds, sensor physics transfer gap, and consensus windowing.
-- Next: Prompt 6 (GATE: wire trained weights into `03 - ML/edge_inference/runner.py`).
-
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 4 (Threshold Calibration) completed & verified
-- Built `03 - ML/training/calibrate_threshold.py`: evaluates full 0.01 resolution threshold table, Brier score, and Expected Calibration Error (ECE) strictly on validation split with anti-MIMIC and anti-test hard guards.
-- Created `03 - ML/tests/test_calibrate_threshold.py` (5 tests): verifies guards, metrics, monotonicity, and automated metadata updating. Test suite: 33/33 passing.
-- Evaluated full DeepBeat validation split (255,874 windows across 4 subjects): selected Youden's J optimal threshold = 0.37 (Val Sens: 95.28%, Spec: 10.52%, NPV: 97.72%). Evaluated Brier score (0.233, ECE 0.424); flagged Platt scaling for future consideration.
-- Generated `calibration_curve.png` and `threshold_tuning_table.csv`. Updated `cnn_af_v1.meta.json` (`decision_threshold: 0.37`). Verified automatic threshold pickup in pure-NumPy `Arrhythmia1DCNN`.
-- Next: Prompt 5 (internal benchmark & external validation evaluation).
-
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 3 completed & verified
-- Built `03 - ML/training/train.py`: auto-device detection, hard guards (refusal on MIMIC contamination, manifest overlap, array overlap), AdamW + pos_weight BCEWithLogitsLoss + ReduceLROnPlateau, validation AUROC early-stopping (patience 5), and per-epoch CSV logging.
-- Created `03 - ML/tests/test_train.py` (4 tests) covering anti-MIMIC detection, manifest disjointness enforcement, subject-isolated subsampling, and end-to-end training smoke run. Test suite: 28/28 passing.
-- Executed training run on DeepBeat (21,938 train windows, 17,562 val windows). Early stopping triggered after 6 epochs (best val AUROC: 0.6346, val AUPRC: 0.8107, wall-clock: 201.9s on CPU).
-- Exported trained model to `03 - ML/model/weights/cnn_af_v1.npz` and `cnn_af_v1.meta.json`. Verified clean loading into pure-NumPy `Arrhythmia1DCNN.load_weights`.
-- Next: Prompt 4 (5-fold subject-grouped cross-validation).
-
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 2 (GATE) completed & verified
-- Built PyTorch mirror `03 - ML/training/torch_model.py` (`Arrhythmia1DCNN`) with `x.permute(0, 2, 1).reshape(batch, -1)` preserving time-major C-order indexing and `nn.Dropout(p=0.5)`.
-- Built weight exporter `03 - ML/training/export_weights.py` exporting state_dict to `.npz` + provenance `.meta.json`.
-- Updated `03 - ML/model/inference_model.py`: added `load_weights(path)` with strict layer shape assertions, wired `self.threshold`, and deleted deprecated `_calibrate_weights()` placeholder.
-- Created `03 - ML/tests/test_parity.py` (7 tests): confirmed bit-level parity on 32 windows with max absolute diff of `5.96e-08` (tolerance `1e-5`); verified negative control fails on wrong flatten permutation (`max_diff = 3.42e-02`). Full test suite: 24/24 passing.
-- Next: Prompt 3 (training loop `train.py` on DeepBeat with val early-stopping).
-
-### 2026-09-13 (later) — Antigravity (Gemini): Prompt 1 completed & verified
-- Built `03 - ML/training/build_dataset.py` with CLI `--dataset {deepbeat,mimic}`, production DSP pipeline, SQI assessment, quality gating, and cross-dataset disjointness assertions.
-- Built MIMIC external validation set: 4,200 windows (10 s @ 100 Hz, 35 subjects, 54.29% AF). Handled sensor dropout NaNs via linear interpolation.
-- Processed full DeepBeat dataset (536,399 records -> 1,072,798 child windows). Detected official partition subject overlap (`146..153`), regrouped by subject: train (12 subjs, 451,791 windows), val (4 subjs, 255,874 windows), test (14 cardiologist-adjudicated subjs, 17,106 windows, 49.46% AF). Quality gating dropped 43.5% of train windows.
-- Test suite expanded to 17/17 pytest tests passing (`test_build_dataset.py`). Prompt 1 complete; ready for Prompt 2 (GATE).
-
-### 2026-09-13 (later) — Antigravity (Gemini): DeepBeat data integration & Prompt 0 verified
-- Resolved user query regarding `.h5` files: identified them as Keras model checkpoints (`deepbeat.h5`, 1.5 MB), while the actual signal partitions reside in `.npz` containers (`validate.npz`, `test.npz`).
-- Integrated both partitions into `03 - ML/data/deepbeat/` alongside `metadata.json` (32.0 Hz, 25.0 s).
-- Verified DeepBeat dataset summary via CLI: 536,399 windows across 30 unique subjects, 51,837 AF (9.7%) / 484,562 non-AF (90.3%), 3,725.0 hours (155.2 days) of wrist PPG recording; surfaced `test_adjudicated` partition (17,617 windows).
-- Enhanced `DeepBeatLoader` with vectorized summary inspection and full unit test coverage (`test_deepbeat_loader_real_data`). 12/12 tests passing.
-- Next: Prompt 1 (windowing, quality gating, subject-isolated splits in `03 - ML/training/build_dataset.py`).
-
-### 2026-09-13 — Antigravity (Gemini): Prompt 0 dataset layer & resampler built
-- Built `PPGDatasetLoader` and `SubjectRecord` in `03 - ML/training/datasets/base.py` providing unified contract.
-- Implemented `to_100hz` in `03 - ML/training/resample.py` via `scipy.signal.resample_poly` with information-preserving upsampling documentation.
-- Built `MimicPerformAFLoader` (`mimic_perform.py`); verified actual data: 35 subjects (19 AF, 16 non-AF), 125.0 Hz, 42,000 s (11.67 h).
-- Built `DeepBeatLoader` (`deepbeat.py`) with strict metadata verification, self-consistency assertions, partition surfacing, and actionable FileNotFoundError.
-- Pinned `requirements-train.txt`, updated `.gitignore` + `.gitkeep`, and established `03 - ML/tests/` (11/11 tests pass).
-- Next: Prompt 1 (windowing, quality gating, subject-isolated splits).
-
-### 2026-09-13 (later) — Claude (Opus 5): dataset choice reversed to DeepBeat
-- User challenged the MIMIC-primary choice and asked which dataset actually maximizes
-  accuracy. On review MIMIC was the wrong call: it had been chosen largely because the
-  thesis chapters already named it — document consistency weighted above model quality.
-- Reversed to **DeepBeat trains, MIMIC PERform AF externally validates** (settled
-  decision 9): wrist reflectance matches the MAX30102, ~500k windows vs ~4.2k against a
-  1.03M-parameter model, and per-window vs per-recording labels. User approved amending
-  Ch. 3 to match.
-- Rewrote the prompt pack to v2 (9 prompts, 3 gates) with a common `PPGDatasetLoader`
-  interface so both datasets share one pipeline, a `to_100hz` resampler, and a code-level
-  guard that MIMIC can never enter training or calibration.
-- Rewrote `PLAN.md` §8 as ten phases; §8.10 is the Ch. 3 amendment owed to the adviser.
-- Next: start the DeepBeat Stanford licence request — it gates everything past §8.2 —
-  then run prompts 0→2 and stop at the parity gate.
-
-### 2026-09-13 — Claude (Opus 5): ML training architecture + Antigravity prompt pack (v1)
-- Pinned the training contract from the real code: 1000 samples @ 100 Hz, preprocessed in
-  `runner.py`'s order — `detrend_ppg` → Butterworth 0.5–5 Hz → `zscore_normalize`
-  (detrend comes *first*). Established the train-in-PyTorch / infer-in-NumPy boundary
-  (settled decision 10).
-- Found the bug that would have silently ruined training: `inference_model.py` flattens
-  `p2` time-major (`t*64+c`) while PyTorch flattens channel-major (`c*250+t`). Same 16000
-  values, different permutation, no crash — hence the mandatory parity gate with a
-  negative control before any training time is spent.
-- Dataset choice from this entry (MIMIC-primary) was reversed later the same day — see
-  the entry above.
+### 2026-09-13 — Claude (Opus 5): v1 ML training architecture and dataset choice
+*Condensed 2026-10-01; both decisions here were later reversed on measurement.*
+- Pinned the training contract from the real code (1000 samples @ 100 Hz, `detrend_ppg` →
+  Butterworth → `zscore_normalize`) and the train-in-PyTorch / infer-in-NumPy boundary.
+- Caught the flatten-order bug (time-major vs channel-major) before any training time was
+  spent, which is why the parity gate exists and still earns its keep.
+- Reversed MIMIC→DeepBeat as the training cohort. That reversal was itself reversed on
+  2026-10-01 once DeepBeat's real size and 32 Hz limit were measured — see decision 9.
 
 ### 2026-09-09 — Claude (Opus 5): vault documentation sweep + memory bootstrap
-- Read the full documentation set (CLAUDE.md, ANTIGRAVITY.md, PLAN.md, Home, both
-  READMEs, Thesis Overview, all four Index files, both code reviews, ADR-001, and both
-  Antigravity notes) and verified it against the actual file trees.
-- Created this file as the single cheap entry point, and trimmed `CLAUDE.md` so
-  auto-loaded context stays small; detail now lives here and is loaded on demand.
-- Confirmed docs match disk. One new discrepancy found: the DeepBeat path in
-  `.gitignore` vs. MIMIC PERform everywhere else (logged above).
-- Next: the four open blockers above, model training decision first.
+- Read the full documentation set, verified it against the file trees, and created this file
+  as the single cheap session entry point, trimming `CLAUDE.md` to a lean bootstrap.
 
 ---
 Back to [[Home|Home]] · Agent charters: [[CLAUDE.md|CLAUDE.md]] · [[ANTIGRAVITY.md|ANTIGRAVITY.md]]

@@ -18,7 +18,9 @@ File names: `YYYY-MM-DD - <component>.md`. This is where Claude Code review sess
 | 2026-09-10 | [[2026-09-10 - Seeded Demo Data, Dead Sensor Link & Offline Blocking Assets|Seeded Demo Data, Dead Sensor Link & Offline Blocking Assets]] | Claude (Opus 5) | open |
 | 2026-09-10 | [[2026-09-10 - Production Readiness Implementation & Offline Asset Verification|Production Readiness Implementation & Offline Asset Verification]] | Antigravity (Gemini) | resolved |
 | 2026-09-10 | [[2026-09-10 - Live Integration Bring-Up - Sampling Rate and Latency Defects|Live Integration Bring-Up - Sampling Rate and Latency Defects]] | Claude (Opus 5) | open |
-| 2026-09-13 | [[2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds|1D-CNN Training Results & Honest Performance Bounds]] | Antigravity (DeepMind) | resolved |
+| 2026-09-13 | [[2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds|1D-CNN Training Results & Honest Performance Bounds]] | Antigravity (DeepMind) | superseded — see 2026-10-01 audit |
+| 2026-10-01 | [[2026-10-01 - 1D-CNN Training Audit - Label-Subject Collinearity and Invalid Weights|1D-CNN Training Audit - Label/Subject Collinearity and Invalid Weights]] | Claude (Opus 5) | open |
+| 2026-10-01 | [[2026-10-01 - ML Rebuild - Working AF Classifier and Chapter 2 Topology Amendment|ML Rebuild - Working AF Classifier & Chapter 2 Topology Amendment]] | Claude (Opus 5) | delivered |
 
 ## Architectural Audits
 

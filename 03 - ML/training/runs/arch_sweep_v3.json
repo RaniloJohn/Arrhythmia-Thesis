@@ -1,0 +1,68 @@
+{
+ "ibi_baseline_subject_auroc": 0.97,
+ "n_subjects": 35,
+ "xwide_statpool": {
+  "receptive_field_s": 1.98,
+  "n_params": 73921,
+  "pooled_subject_auroc": 0.7566,
+  "pooled_window_auroc": 0.7662,
+  "fold_subject_auroc": [
+   1.0,
+   0.3333,
+   0.75,
+   0.9167,
+   0.6667
+  ],
+  "fold_mean": 0.7333,
+  "fold_std": 0.2322,
+  "minutes": 19.9
+ },
+ "xxwide_statpool": {
+  "receptive_field_s": 3.9,
+  "n_params": 141505,
+  "pooled_subject_auroc": 0.8355,
+  "pooled_window_auroc": 0.8174,
+  "fold_subject_auroc": [
+   1.0,
+   0.6667,
+   1.0,
+   1.0,
+   0.5
+  ],
+  "fold_mean": 0.8333,
+  "fold_std": 0.2108,
+  "minutes": 32.1
+ },
+ "huge_statpool": {
+  "receptive_field_s": 6.86,
+  "n_params": 141505,
+  "pooled_subject_auroc": 0.8487,
+  "pooled_window_auroc": 0.8306,
+  "fold_subject_auroc": [
+   1.0,
+   0.6667,
+   1.0,
+   1.0,
+   0.75
+  ],
+  "fold_mean": 0.8833,
+  "fold_std": 0.1453,
+  "minutes": 20.5
+ },
+ "huge_gap": {
+  "receptive_field_s": 6.86,
+  "n_params": 137409,
+  "pooled_subject_auroc": 0.8421,
+  "pooled_window_auroc": 0.7927,
+  "fold_subject_auroc": [
+   1.0,
+   0.6667,
+   1.0,
+   1.0,
+   0.75
+  ],
+  "fold_mean": 0.8833,
+  "fold_std": 0.1453,
+  "minutes": 23.7
+ }
+}

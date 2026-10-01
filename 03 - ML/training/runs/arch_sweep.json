@@ -1,0 +1,107 @@
+{
+ "cohort": "mimic",
+ "folds": 5,
+ "ibi_baseline_subject_auroc": 0.97,
+ "ch2_flatten": {
+  "receptive_field_samples": 12,
+  "receptive_field_s": 0.12,
+  "n_params": 1030529,
+  "pooled_subject_auroc": 0.5329,
+  "pooled_window_auroc": 0.5132,
+  "fold_subject_auroc": [
+   0.4167,
+   0.6667,
+   0.5,
+   0.5,
+   0.75
+  ],
+  "fold_mean": 0.5667,
+  "fold_std": 0.1225,
+  "minutes": 2.5
+ },
+ "ch2_gap": {
+  "receptive_field_samples": 12,
+  "receptive_field_s": 0.12,
+  "n_params": 10625,
+  "pooled_subject_auroc": 0.5625,
+  "pooled_window_auroc": 0.535,
+  "fold_subject_auroc": [
+   0.3333,
+   0.6667,
+   0.4167,
+   0.75,
+   1.0
+  ],
+  "fold_mean": 0.6333,
+  "fold_std": 0.2392,
+  "minutes": 1.1
+ },
+ "ch2_statpool": {
+  "receptive_field_samples": 12,
+  "receptive_field_s": 0.12,
+  "n_params": 14721,
+  "pooled_subject_auroc": 0.5855,
+  "pooled_window_auroc": 0.5593,
+  "fold_subject_auroc": [
+   0.4167,
+   0.75,
+   0.5833,
+   0.5,
+   0.8333
+  ],
+  "fold_mean": 0.6167,
+  "fold_std": 0.1545,
+  "minutes": 2.5
+ },
+ "wide_gap": {
+  "receptive_field_samples": 102,
+  "receptive_field_s": 1.02,
+  "n_params": 36033,
+  "pooled_subject_auroc": 0.7303,
+  "pooled_window_auroc": 0.7175,
+  "fold_subject_auroc": [
+   0.8333,
+   0.5,
+   0.6667,
+   0.8333,
+   1.0
+  ],
+  "fold_mean": 0.7667,
+  "fold_std": 0.17,
+  "minutes": 2.0
+ },
+ "wide_statpool": {
+  "receptive_field_samples": 102,
+  "receptive_field_s": 1.02,
+  "n_params": 40129,
+  "pooled_subject_auroc": 0.7368,
+  "pooled_window_auroc": 0.7159,
+  "fold_subject_auroc": [
+   0.8333,
+   0.5,
+   0.8333,
+   0.5833,
+   1.0
+  ],
+  "fold_mean": 0.75,
+  "fold_std": 0.1826,
+  "minutes": 1.7
+ },
+ "xwide_statpool": {
+  "receptive_field_samples": 198,
+  "receptive_field_s": 1.98,
+  "n_params": 73921,
+  "pooled_subject_auroc": 0.773,
+  "pooled_window_auroc": 0.7692,
+  "fold_subject_auroc": [
+   0.8333,
+   0.6667,
+   0.8333,
+   0.75,
+   1.0
+  ],
+  "fold_mean": 0.8167,
+  "fold_std": 0.1105,
+  "minutes": 4.0
+ }
+}

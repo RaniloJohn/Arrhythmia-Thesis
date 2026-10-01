@@ -41,6 +41,7 @@ from signal_processing.sqi import SignalQualityAssessor
 from signal_processing.peak_detection import ElgendiPeakDetector
 from model.inference_model import Arrhythmia1DCNN
 from model.grad_cam import GradCAM1D
+from model.ibi_classifier import IBIAFClassifier, ibi_features_from_peaks
 from edge_inference.serial_protocol import StreamPacketParser, pack_ppg_frame
 
 
@@ -162,7 +163,8 @@ class EdgeInferenceRunner:
                  step_size: int = 100,  # 1-second step @ 100Hz
                  dashboard_port: int = 5051,
                  http_ingest_url: Optional[str] = None,
-                 weights_path: Optional[Union[str, Path]] = None):
+                 weights_path: Optional[Union[str, Path]] = None,
+                 classifier: str = "ibi"):
         # Resolve patient_id from argument or TARGET_PATIENT_ID env var (PLAN §2)
         resolved_patient_id = patient_id or os.environ.get("TARGET_PATIENT_ID")
         self.patient_id = resolved_patient_id
@@ -225,6 +227,34 @@ class EdgeInferenceRunner:
             print("!" * 78 + "\n")
 
         self.grad_cam = GradCAM1D(self.model)
+
+        # ---- IBI-irregularity classifier (default). `model_trained` must not mean merely
+        # "a file loaded": the v1 runner reported model_trained=true for a chance-level
+        # model. It is now gated on a validated subject-level AUROC recorded in the
+        # metadata alongside the weights.
+        self.classifier_kind = classifier
+        self.ibi_model = IBIAFClassifier()
+        self.model_validated = False
+        self.validated_auroc: Optional[float] = None
+        ibi_w = Path(os.environ.get("ARRHYTHMIA_IBI_WEIGHTS", "").strip() or
+                     Path(__file__).resolve().parent.parent / "model" / "weights" / "ibi_af_v1.npz")
+        if ibi_w.exists():
+            self.ibi_model.load(ibi_w)
+            auroc = (self.ibi_model.metrics or {}).get("subject_auroc")
+            self.validated_auroc = float(auroc) if auroc is not None else None
+            self.model_validated = self.validated_auroc is not None and self.validated_auroc >= 0.70
+            print(f"[Edge Runner] IBI classifier loaded: {self.ibi_model.model_version} | "
+                  f"threshold {self.ibi_model.threshold:.2f} | "
+                  f"validated subject AUROC {self.validated_auroc} | "
+                  f"VALIDATED={self.model_validated}")
+        elif self.classifier_kind == "ibi":
+            print("\n" + "!" * 78)
+            print("[Edge Runner WARNING] IBI classifier weights not found at")
+            print(f"[Edge Runner WARNING]   {ibi_w}")
+            print("[Edge Runner WARNING] Run: python training/train_ibi_model.py")
+            print("[Edge Runner WARNING] Falling back to the 1D-CNN path, which is NOT validated.")
+            print("!" * 78 + "\n")
+            self.classifier_kind = "cnn"
 
         # Consensus tracking buffer (rolling window of 5 decisions for temporal stability)
         self.decision_history: List[int] = []
@@ -369,9 +399,10 @@ class EdgeInferenceRunner:
             return telemetry_payload
 
         # 3. Peak Detection & Real-Time BPM
-        peak_res = self.peak_detector.analyze_intervals(
-            self.peak_detector.detect_peaks(filtered)
-        )
+        #    Peak indices are retained: the IBI classifier consumes them directly, so they
+        #    are detected once and shared rather than recomputed.
+        peaks_idx = self.peak_detector.detect_peaks(filtered)
+        peak_res = self.peak_detector.analyze_intervals(peaks_idx)
         # If no pulse can be resolved from a contacted, good-quality window, report
         # that honestly as None rather than substituting a default heart rate.
         current_bpm = peak_res["bpm"] if peak_res["bpm"] > 0 else None
@@ -398,15 +429,30 @@ class EdgeInferenceRunner:
             self.broadcast_telemetry(telemetry_payload)
             return telemetry_payload
 
-        # 4. 1D-CNN Inference & 1D Grad-CAM Explainability
+        # 4. Classification & explainability
+        #    Default classifier is the IBI-irregularity model (`ibi_af_v1`), which is the one
+        #    with measured skill on patient-disjoint validation: subject AUROC 0.970
+        #    (95% CI 0.908-1.000, n=35) against 0.53-0.77 for the convolutional variants on
+        #    identical data and protocol. Its explanation is a counterfactual per-interval
+        #    attribution, which is exactly faithful rather than a gradient approximation.
+        #    `--classifier cnn` keeps the 1D-CNN + Grad-CAM path available for comparison.
         t_ml_start = time.perf_counter_ns()
-        gradcam_res = self.grad_cam.explain(normalized)
+        if self.classifier_kind == "ibi":
+            feats = ibi_features_from_peaks(np.asarray(peaks_idx), 100.0)
+            af_prob, af_detected, _ = self.ibi_model.predict_from_features(feats)
+            expl = self.ibi_model.explain_intervals(np.asarray(peaks_idx), 100.0,
+                                                    n_samples=len(normalized))
+            gradcam_weights = expl["heatmap"]
+            explain_record = {"top_intervals": expl["top_intervals"],
+                              "drivers": self.ibi_model.explain(feats)["top_drivers"]}
+        else:
+            gradcam_res = self.grad_cam.explain(normalized)
+            af_prob = gradcam_res["af_probability"]
+            af_detected = gradcam_res["af_detected"]
+            gradcam_weights = gradcam_res["weights"]
+            explain_record = {"high_regions": gradcam_res["high_relevance_regions"][:5]}
         t_ml_end = time.perf_counter_ns()
         inference_latency_ms = (t_ml_end - t_ml_start) / 1_000_000.0
-
-        af_prob = gradcam_res["af_probability"]
-        af_detected = gradcam_res["af_detected"]
-        gradcam_weights = gradcam_res["weights"]
 
         # Update rolling decision history for temporal consensus
         self.decision_history.append(int(af_detected))
@@ -424,7 +470,7 @@ class EdgeInferenceRunner:
                 bpm=current_bpm,
                 af_detected=af_detected,
                 confidence=af_prob,
-                gradcam_path=json.dumps({"high_regions": gradcam_res["high_relevance_regions"][:5]})
+                gradcam_path=json.dumps(explain_record)
             )
             db_event_id = event_rec["event_id"]
 
@@ -446,11 +492,20 @@ class EdgeInferenceRunner:
             "af_detected": int(af_detected),
             "af_consensus": consensus_af,
             "af_probability": round(af_prob, 4),
-            "weights_loaded": bool(self.model.weights_loaded),
-            "model_trained": bool(self.model.weights_loaded),
-            "model_version": getattr(self.model, "model_version", "unknown"),
-            "training_dataset": getattr(self.model, "training_dataset", "unknown"),
-            "decision_threshold": round(float(self.model.threshold), 4),
+            "classifier": self.classifier_kind,
+            "weights_loaded": bool(self.ibi_model.weights_loaded if self.classifier_kind == "ibi"
+                                   else self.model.weights_loaded),
+            # `model_trained` means "validated above a measured skill floor", not "a file
+            # loaded". The 1D-CNN path is reported as unvalidated regardless of weights.
+            "model_trained": bool(self.model_validated) if self.classifier_kind == "ibi" else False,
+            "model_validated_subject_auroc": self.validated_auroc if self.classifier_kind == "ibi" else None,
+            "model_version": (self.ibi_model.model_version if self.classifier_kind == "ibi"
+                              else getattr(self.model, "model_version", "unknown")),
+            "training_dataset": ("mimic_perform_af" if self.classifier_kind == "ibi"
+                                 else getattr(self.model, "training_dataset", "unknown")),
+            "decision_threshold": round(float(self.ibi_model.threshold if self.classifier_kind == "ibi"
+                                              else self.model.threshold), 4),
+            "explanation": explain_record,
             "sqi": sqi_res,
             "hrv": {
                 "rmssd_ms": peak_res["rmssd_ms"],
@@ -599,13 +654,18 @@ if __name__ == "__main__":
     parser.add_argument("--patient", type=str, default=None, help="Target patient ID (or TARGET_PATIENT_ID env var)")
     parser.add_argument("--device", type=str, default="ESP32C3-NODE-01", help="Device ID")
     parser.add_argument("--prefill", action="store_true", default=False, help="Prefill initial window for instant emission")
-    parser.add_argument("--weights", type=str, default=None, help="Path to trained model weights .npz file (default: 03 - ML/model/weights/cnn_af_v1.npz)")
+    parser.add_argument("--weights", type=str, default=None, help="Path to 1D-CNN weights .npz (default: 03 - ML/model/weights/cnn_af_v1.npz)")
+    parser.add_argument("--classifier", choices=["ibi", "cnn"], default=os.environ.get("ARRHYTHMIA_CLASSIFIER", "ibi"),
+                        help="Classifier to run. 'ibi' (default) is the validated IBI-irregularity model "
+                             "(subject AUROC 0.970, n=35); 'cnn' runs the 1D-CNN + Grad-CAM path, which is "
+                             "retained for comparison and is NOT validated.")
     args = parser.parse_args()
 
     runner = EdgeInferenceRunner(
         patient_id=args.patient,
         device_id=args.device,
         weights_path=args.weights,
+        classifier=args.classifier,
     )
     try:
         if args.simulate:

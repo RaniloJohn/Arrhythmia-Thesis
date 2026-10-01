@@ -1,0 +1,109 @@
+{
+ "cohort": "mimic",
+ "n_windows": 4189,
+ "n_groups": 35,
+ "cv": {
+  "folds": [
+   {
+    "fold": 1,
+    "test_groups": [
+     "mimic_mimic_perform_af_005",
+     "mimic_mimic_perform_af_009",
+     "mimic_mimic_perform_af_013",
+     "mimic_mimic_perform_af_019",
+     "mimic_mimic_perform_non_af_005",
+     "mimic_mimic_perform_non_af_010",
+     "mimic_mimic_perform_non_af_016"
+    ],
+    "subject_auroc": 0.4167,
+    "window_auroc": 0.3837,
+    "best_epoch": 2,
+    "best_val_subject_auroc": 0.6667,
+    "epochs_run": 10
+   },
+   {
+    "fold": 2,
+    "test_groups": [
+     "mimic_mimic_perform_af_003",
+     "mimic_mimic_perform_af_008",
+     "mimic_mimic_perform_af_012",
+     "mimic_mimic_perform_af_018",
+     "mimic_mimic_perform_non_af_004",
+     "mimic_mimic_perform_non_af_009",
+     "mimic_mimic_perform_non_af_015"
+    ],
+    "subject_auroc": 0.4167,
+    "window_auroc": 0.4614,
+    "best_epoch": 1,
+    "best_val_subject_auroc": 0.6667,
+    "epochs_run": 9
+   },
+   {
+    "fold": 3,
+    "test_groups": [
+     "mimic_mimic_perform_af_002",
+     "mimic_mimic_perform_af_004",
+     "mimic_mimic_perform_af_011",
+     "mimic_mimic_perform_af_017",
+     "mimic_mimic_perform_non_af_003",
+     "mimic_mimic_perform_non_af_008",
+     "mimic_mimic_perform_non_af_014"
+    ],
+    "subject_auroc": 0.5,
+    "window_auroc": 0.4918,
+    "best_epoch": 1,
+    "best_val_subject_auroc": 0.3333,
+    "epochs_run": 9
+   },
+   {
+    "fold": 4,
+    "test_groups": [
+     "mimic_mimic_perform_af_001",
+     "mimic_mimic_perform_af_007",
+     "mimic_mimic_perform_af_016",
+     "mimic_mimic_perform_non_af_002",
+     "mimic_mimic_perform_non_af_007",
+     "mimic_mimic_perform_non_af_012",
+     "mimic_mimic_perform_non_af_013"
+    ],
+    "subject_auroc": 0.75,
+    "window_auroc": 0.508,
+    "best_epoch": 2,
+    "best_val_subject_auroc": 0.5833,
+    "epochs_run": 10
+   },
+   {
+    "fold": 5,
+    "test_groups": [
+     "mimic_mimic_perform_af_006",
+     "mimic_mimic_perform_af_010",
+     "mimic_mimic_perform_af_014",
+     "mimic_mimic_perform_af_015",
+     "mimic_mimic_perform_non_af_001",
+     "mimic_mimic_perform_non_af_006",
+     "mimic_mimic_perform_non_af_011"
+    ],
+    "subject_auroc": 0.4167,
+    "window_auroc": 0.5004,
+    "best_epoch": 2,
+    "best_val_subject_auroc": 0.3333,
+    "epochs_run": 10
+   }
+  ],
+  "pooled_subject_auroc": 0.4704,
+  "pooled_window_auroc": 0.4662,
+  "fold_subject_auroc_mean": 0.5,
+  "fold_subject_auroc_std": 0.1291
+ },
+ "final": {
+  "best_epoch": 1,
+  "best_val_subject_auroc": 0.4,
+  "epochs_run": 9
+ },
+ "cross_sensor": {
+  "cohort": "deepbeat",
+  "subject_auroc": 0.7845,
+  "window_auroc": 0.5111,
+  "n_subjects": 38
+ }
+}

@@ -1,0 +1,128 @@
+{
+ "feature_names": [
+  "n_beats",
+  "mean_ibi",
+  "sd_ibi",
+  "rmssd",
+  "cv_ibi",
+  "pnn50",
+  "ibi_range",
+  "ibi_iqr",
+  "shannon_dibi",
+  "mean_hr",
+  "sd_hr",
+  "median_dibi_abs"
+ ],
+ "combined_cv": {
+  "window_auroc": 0.675,
+  "subject_auroc": 0.6876,
+  "n_subjects": 73,
+  "subject_threshold": 0.5954,
+  "subject_sens": 0.6333,
+  "subject_spec": 0.7674,
+  "subject_confusion": {
+   "tp": 19,
+   "fp": 10,
+   "tn": 33,
+   "fn": 11
+  }
+ },
+ "combined_cv_deepbeat": {
+  "window_auroc": 0.6211,
+  "subject_auroc": 0.4882,
+  "n_subjects": 38,
+  "subject_threshold": 0.4006,
+  "subject_sens": 1.0,
+  "subject_spec": 0.2222,
+  "subject_confusion": {
+   "tp": 11,
+   "fp": 21,
+   "tn": 6,
+   "fn": 0
+  }
+ },
+ "combined_cv_mimic": {
+  "window_auroc": 0.8152,
+  "subject_auroc": 0.8454,
+  "n_subjects": 35,
+  "subject_threshold": 0.6065,
+  "subject_sens": 0.8421,
+  "subject_spec": 0.875,
+  "subject_confusion": {
+   "tp": 16,
+   "fp": 2,
+   "tn": 14,
+   "fn": 3
+  }
+ },
+ "within_deepbeat": {
+  "window_auroc": 0.5991,
+  "subject_auroc": 0.468,
+  "n_subjects": 38,
+  "subject_threshold": 0.3877,
+  "subject_sens": 1.0,
+  "subject_spec": 0.1481,
+  "subject_confusion": {
+   "tp": 11,
+   "fp": 23,
+   "tn": 4,
+   "fn": 0
+  }
+ },
+ "within_mimic": {
+  "window_auroc": 0.936,
+  "subject_auroc": 0.9704,
+  "n_subjects": 35,
+  "subject_threshold": 0.2283,
+  "subject_sens": 1.0,
+  "subject_spec": 0.875,
+  "subject_confusion": {
+   "tp": 19,
+   "fp": 2,
+   "tn": 14,
+   "fn": 0
+  }
+ },
+ "train_deepbeat_test_mimic": {
+  "window_auroc": 0.6789,
+  "subject_auroc": 0.6908,
+  "n_subjects": 35,
+  "subject_threshold": 0.6132,
+  "subject_sens": 0.7368,
+  "subject_spec": 0.6875,
+  "subject_confusion": {
+   "tp": 14,
+   "fp": 5,
+   "tn": 11,
+   "fn": 5
+  }
+ },
+ "train_mimic_test_deepbeat": {
+  "window_auroc": 0.6371,
+  "subject_auroc": 0.5825,
+  "n_subjects": 38,
+  "subject_threshold": 0.4328,
+  "subject_sens": 0.7273,
+  "subject_spec": 0.6296,
+  "subject_confusion": {
+   "tp": 8,
+   "fp": 10,
+   "tn": 17,
+   "fn": 3
+  }
+ },
+ "coefficients": {
+  "sd_ibi": 1.2472,
+  "mean_ibi": -1.0975,
+  "cv_ibi": -1.0849,
+  "sd_hr": -0.8327,
+  "mean_hr": 0.6841,
+  "shannon_dibi": 0.4853,
+  "rmssd": 0.3217,
+  "ibi_range": 0.2965,
+  "pnn50": 0.2026,
+  "n_beats": -0.1528,
+  "ibi_iqr": -0.1278,
+  "median_dibi_abs": 0.0503
+ }
+}

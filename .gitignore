@@ -23,6 +23,11 @@ venv/
 03 - ML/data/processed/*
 !03 - ML/data/processed/.gitkeep
 03 - ML/model/weights/*.npz
+# ibi_af_v1 is the DEPLOYED classifier and only 1.3 KB. It must be tracked: the Pi is
+# updated by `git pull`, so an ignored weights file cannot be deployed.
+!03 - ML/model/weights/ibi_af_v1.npz
+# cnn_af_v1 was never validly trained (see the 2026-10-01 audit). Kept tracked only until the
+# adviser has seen the audit, then deleted per PLAN.md §9.5.
 !03 - ML/model/weights/cnn_af_v1.npz
 !03 - ML/model/weights/.gitkeep
 

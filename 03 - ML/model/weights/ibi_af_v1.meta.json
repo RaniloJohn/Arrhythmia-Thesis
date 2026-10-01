@@ -1,0 +1,119 @@
+{
+ "model_version": "ibi_af_v1",
+ "model_family": "IBI irregularity + logistic regression (pure NumPy runtime)",
+ "feature_names": [
+  "n_beats",
+  "mean_ibi",
+  "sd_ibi",
+  "rmssd",
+  "cv_ibi",
+  "pnn50",
+  "ibi_range",
+  "ibi_iqr",
+  "shannon_dibi",
+  "mean_hr",
+  "sd_hr",
+  "median_dibi_abs"
+ ],
+ "rate_features": [
+  "n_beats",
+  "mean_ibi",
+  "mean_hr"
+ ],
+ "training_cohort": {
+  "name": "mimic_perform_af",
+  "fs_hz": 125.0,
+  "n_subjects": 35,
+  "n_windows": 4189,
+  "window_s": 10.0,
+  "resampled_to_hz": 100.0
+ },
+ "input_contract": {
+  "fs": 100.0,
+  "window_samples": 1000,
+  "preprocessing_chain": [
+   "detrend_ppg",
+   "ButterBandpassFilter(0.5,5.0,fs=100,order=4)",
+   "zscore_normalize"
+  ],
+  "peak_detector": "ElgendiPeakDetector(fs=100)"
+ },
+ "decision_threshold": 0.32,
+ "consensus_k": 3,
+ "consensus_n": 5,
+ "coefficients": {
+  "n_beats": 1.15783,
+  "mean_ibi": -1.3448,
+  "sd_ibi": -0.29238,
+  "rmssd": -0.73701,
+  "cv_ibi": 2.39889,
+  "pnn50": 2.83046,
+  "ibi_range": -0.42107,
+  "ibi_iqr": 0.44304,
+  "shannon_dibi": 1.3854,
+  "mean_hr": -1.07339,
+  "sd_hr": -2.138,
+  "median_dibi_abs": -0.18045
+ },
+ "metrics": {
+  "protocol": "patient-disjoint 5-fold GroupKFold; all figures out-of-fold",
+  "subject_auroc": 0.9704,
+  "subject_auroc_ci95": [
+   0.9082,
+   1.0
+  ],
+  "window_auroc": 0.936,
+  "window_operating_point": {
+   "threshold": 0.32,
+   "sensitivity": 0.9591,
+   "specificity": 0.8359,
+   "ppv": 0.8742,
+   "npv": 0.9451,
+   "youden_j": 0.7951,
+   "tp": 2182,
+   "fp": 314,
+   "tn": 1600,
+   "fn": 93
+  },
+  "unconstrained_youden_point": {
+   "threshold": 0.32,
+   "sensitivity": 0.9591,
+   "specificity": 0.8359,
+   "ppv": 0.8742,
+   "npv": 0.9451,
+   "youden_j": 0.7951,
+   "tp": 2182,
+   "fp": 314,
+   "tn": 1600,
+   "fn": 93
+  },
+  "threshold_selection_rule": "Youden's J (passed non-degeneracy check on sensitivity and specificity)",
+  "non_degeneracy_floor": 0.7,
+  "subject_operating_point": {
+   "consensus_k": 3,
+   "consensus_n": 5,
+   "subject_flag_rate_threshold": 0.92,
+   "sensitivity": 1.0,
+   "specificity": 0.9375,
+   "confusion": {
+    "tp": 19,
+    "fp": 1,
+    "tn": 15,
+    "fn": 0
+   },
+   "n_subjects": 35
+  },
+  "cross_sensor": {
+   "cohort": "deepbeat",
+   "subject_auroc": 0.5825,
+   "window_auroc": 0.6371,
+   "n_subjects": 38,
+   "note": "DeepBeat is 32 Hz; one sample is 31 ms against the 50 ms pNN50 criterion, so interval features are quantisation-limited there."
+  }
+ },
+ "caveats": [
+  "AF and non-AF subjects are different people, so any systematic group difference (rate, age, medication) is a potential confound. The rate-free ablation reaches subject AUROC 0.914, which is the evidence that irregularity rather than rate carries the signal.",
+  "n = 35 subjects. The subject-level CI is wide and is the figure to quote.",
+  "Not validated on the project's own MAX30102 wrist hardware. Transfer from fingertip transmissive PPG to wrist reflectance PPG is unmeasured."
+ ]
+}

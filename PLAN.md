@@ -203,7 +203,7 @@ reading a real device, the exact same pipeline carries real data through.
       responds, and — if an ESP32 is plugged in — real BPM/waveform data (not the
       synthetic demo pattern) appears in the live view within a few seconds.
 
-## 8. Model Training — from untrained scaffold to trained, externally-validated weights
+## 8. Model Training — ⚠️ SUPERSEDED 2026-10-01, see §9 (the pipeline was built; the model it produced was invalid)
 
 **Context:** the 1D-CNN in `03 - ML/model/inference_model.py` has never been trained — its
 weights are He-init random, and `_calibrate_weights()` only nudges the output bias. This is
@@ -339,6 +339,66 @@ request first.** MIMIC PERform AF is openly available and is not needed until §
 ### 8.10 Thesis amendment (Claude, not Antigravity)
 - [ ] Draft the Chapter 3 methodology amendment recording the new dataset roles and the
       domain-match / data-volume / label-granularity justification, for the adviser.
+
+## 9. Post-rebuild follow-ups for Antigravity (added 2026-10-01 by Claude, ML lead)
+
+§8 is **superseded**. Its pipeline was built correctly but trained an invalid model; see
+`02 - Code Review/2026-10-01 - 1D-CNN Training Audit - ...` and
+`02 - Code Review/2026-10-01 - ML Rebuild - ...`. The classifier now deployed is
+`model/weights/ibi_af_v1.npz` (subject AUROC 0.970, 95% CI [0.908, 1.000], n=35), wired as the
+default in `edge_inference/runner.py`. Do **not** retrain or re-wire `cnn_af_v1.npz`.
+
+Atomic checklist, in order. Each item is independently verifiable.
+
+### 9.1 Dashboard: surface validation state (frontend, `07 - Website/`)
+- [ ] Read `model_validated_subject_auroc` and `classifier` from the live telemetry payload.
+- [ ] Render a badge: **"Validated model"** when `model_trained` is true, **"UNVALIDATED — not
+      for clinical use"** (amber, same treatment as the existing simulation banner) when false.
+- [ ] Show the validated subject AUROC and `n` in the badge tooltip. Never display a bare
+      point estimate without its interval.
+- [ ] Verify: run `python edge_inference/runner.py --simulate --duration 40 --prefill`, then
+      the same with `--classifier cnn`, and confirm the badge flips.
+
+### 9.2 Dashboard: render the beat-level explanation
+- [ ] Telemetry now carries `explanation.top_intervals` (each with `start_sample`,
+      `end_sample`, `ibi_s`, `deviation_from_median_s`, `contribution`) and
+      `explanation.drivers`.
+- [ ] The existing Grad-CAM heat-strip already renders `gradcam_weights` unchanged — no change
+      needed there, it now carries the interval attribution.
+- [ ] Add a short text line under the waveform naming the top drivers, e.g.
+      "Driven by: beat-to-beat variability (pnn50), interval dispersion (cv_ibi)".
+- [ ] Label the strip **"intervals that drove this score"**, not "Grad-CAM", when
+      `classifier == "ibi"` — the two are different mechanisms and must not be conflated.
+
+### 9.3 Deploy to the Pi
+- [ ] `git pull` on the Pi, then restart `arrhythmia-edge.service` and
+      `arrhythmia-website.service`.
+- [ ] Confirm the edge log prints `IBI classifier loaded: ibi_af_v1 | ... | VALIDATED=True`.
+- [ ] Confirm `scipy` is present in the Pi's Python environment (the DSP chain and the IBI
+      feature extractor both need it; `torch` must **not** be installed there).
+- [ ] Re-measure latency on the Pi itself — the 3.6–7.3 ms figure is from the Windows dev
+      machine and must not be quoted as a deployment number.
+
+### 9.4 Measure what RQ5 still lacks
+- [ ] CPU and RAM utilisation of `arrhythmia-edge.service` under continuous load (`pidstat`).
+- [ ] 24 h soak test; record any restart, memory growth or dropped-window count.
+- [ ] Confirm the hash chain still verifies after the soak.
+
+### 9.5 Retire the invalid artefact
+- [ ] Once the adviser has seen the audit, delete `model/weights/cnn_af_v1.npz`,
+      `cnn_af_v1.meta.json`, `calibration_curve.png` and `threshold_tuning_table.csv`, and the
+      `runs/*_eval_*` / `runs/*_cross_val_*` / `runs/gradcam_validation/` outputs derived from
+      them, so none can be cited by accident. Keep the code; delete the numbers.
+
+### 9.6 Do NOT do
+- Do not re-run `03 - ML/training/build_dataset.py` (v1) — its subject keying merges different
+  people under one label-contradictory ID. Use `build_dataset_v2.py`.
+- Do not train on DeepBeat. At 32 Hz one sample is 31 ms against the 50 ms pNN50 criterion; a
+  3-parameter irregularity model scores at chance (0.465) on it.
+- Do not report window-level metrics as the headline. Labels are constant within a recording,
+  so window counts overstate the sample size by ~120x.
+
+---
 
 ## Explicitly out of scope for this pass
 
