@@ -91,17 +91,57 @@ volatile SampleData ringBuffer[RING_BUFFER_SIZE];
 volatile uint16_t rbHead = 0;
 volatile uint16_t rbTail = 0;
 
-// On-board Heuristic Peak Detector (Local OLED fallback path)
-float dcFilterIR = 0.0f;
-float acFilteredIR = 0.0f;
-uint32_t lastPeakTime = 0;
-float currentBpm = 0.0f;
-float avgBpm = 0.0f;
-#define BPM_HISTORY_SIZE 4
-float bpmHistory[BPM_HISTORY_SIZE] = {0};
-uint8_t bpmIndex = 0;
-bool irregularRhythmAlert = false;
-uint8_t consecutiveIrregularCount = 0;
+// On-board pulse-rate estimator (local OLED readout + heuristic_bpm_x10 field).
+// Pulse rate only: the rhythm decision belongs to ibi_af_v1 on the Pi, so the
+// node never shows a rhythm verdict of its own.
+//
+// Beats are timed by sample count at the sensor's 100 Hz clock, not millis(),
+// so display redraws cannot distort them. 0.5-5 Hz Butterworth band-pass, an
+// adaptive threshold (50% of the largest swing in the last 2 s), a 300 ms
+// refractory period, parabolic peak interpolation, and the median of the last
+// 8 intervals.
+struct Biquad {
+    float b0, b1, b2, a1, a2, z1, z2;
+    void design(float f0, float fs, bool high) {
+        float w0 = 2.0f * PI * f0 / fs;
+        float c = cosf(w0);
+        float alpha = sinf(w0) / (2.0f * 0.70710678f);   // Q = 1/sqrt(2)
+        float a0 = 1.0f + alpha;
+        if (high) { b0 = (1.0f + c) / 2.0f; b1 = -(1.0f + c); }
+        else      { b0 = (1.0f - c) / 2.0f; b1 =  (1.0f - c); }
+        b2 = b0;
+        b0 /= a0; b1 /= a0; b2 /= a0;
+        a1 = -2.0f * c / a0;
+        a2 = (1.0f - alpha) / a0;
+        z1 = z2 = 0;
+    }
+    float step(float x) {
+        float y = b0 * x + z1;
+        z1 = b1 * x - a1 * y + z2;
+        z2 = b2 * x - a2 * y;
+        return y;
+    }
+};
+
+#define PULSE_SETTLE_SAMPLES 100       // 1 s for the filters to settle
+#define PULSE_LOSS_SAMPLES 50          // finger gone 0.5 s before resetting
+#define PULSE_REFRACTORY_SAMPLES 30    // 300 ms -> 200 bpm ceiling
+#define PULSE_NO_BEAT_SAMPLES 300      // 3 s without a beat -> unknown
+#define PULSE_WIN 200                  // 2 s adaptive-threshold window
+#define PULSE_IBI_COUNT 8
+
+Biquad pulseHighPass, pulseLowPass;
+float pulseWin[PULSE_WIN];
+uint16_t pulseWinPos = 0;
+float pulseIbis[PULSE_IBI_COUNT];
+uint8_t pulseIbiPos = 0, pulseIbiFilled = 0;
+bool pulseFingerOn = false;
+float pulseIrSeed = 0;
+uint32_t pulseN = 0;
+float pulseY1 = 0, pulseY2 = 0;
+float pulseLastPeakT = -1;
+uint32_t pulseLastPeakN = 0;
+float pulseBpm = 0.0f;                 // 0 = unknown
 
 // OLED Refresh Throttle (5 Hz refresh to conserve I2C bandwidth for 100 Hz sensor)
 uint32_t lastOledUpdateMs = 0;
@@ -126,58 +166,83 @@ uint16_t computeCRC16(const uint8_t* data, size_t length) {
     return crc;
 }
 
-/**
- * @brief On-board heuristic peak detector for standalone local OLED readout.
- * Provides resilient primary-care fallback if serial link or Pi is detached.
- */
-void processLocalPeak(uint32_t ir, uint32_t nowMs) {
-    // Single-pole IIR high-pass filter for DC baseline removal
-    const float alpha = 0.95f;
-    dcFilterIR = alpha * dcFilterIR + (1.0f - alpha) * (float)ir;
-    acFilteredIR = (float)ir - dcFilterIR;
+void resetPulseEstimator() {
+    pulseHighPass.design(0.5f, SAMPLING_RATE_HZ, true);
+    pulseLowPass.design(5.0f, SAMPLING_RATE_HZ, false);
+    for (int i = 0; i < PULSE_WIN; i++) pulseWin[i] = 0;
+    pulseWinPos = 0; pulseIbiPos = 0; pulseIbiFilled = 0;
+    pulseN = 0; pulseY1 = pulseY2 = 0;
+    pulseLastPeakT = -1; pulseLastPeakN = 0;
+    pulseBpm = 0.0f;
+}
 
-    // Peak detector with refractory period (300 ms = 200 BPM ceiling)
-    static float peakThreshold = 150.0f;
-    static bool aboveThreshold = false;
-
-    if (acFilteredIR > peakThreshold && !aboveThreshold && (nowMs - lastPeakTime > 300)) {
-        aboveThreshold = true;
-        uint32_t ibiMs = nowMs - lastPeakTime;
-        lastPeakTime = nowMs;
-
-        if (ibiMs > 300 && ibiMs < 2000) {
-            float instantBpm = 60000.0f / (float)ibiMs;
-            bpmHistory[bpmIndex] = instantBpm;
-            bpmIndex = (bpmIndex + 1) % BPM_HISTORY_SIZE;
-
-            // Rolling average
-            float sum = 0;
-            uint8_t validCount = 0;
-            for (int i = 0; i < BPM_HISTORY_SIZE; i++) {
-                if (bpmHistory[i] > 30.0f && bpmHistory[i] < 220.0f) {
-                    sum += bpmHistory[i];
-                    validCount++;
-                }
-            }
-            if (validCount > 0) {
-                avgBpm = sum / validCount;
-                currentBpm = instantBpm;
-            }
-
-            // Local irregularity detection (>20 BPM fluctuation across successive beats)
-            if (fabs(instantBpm - avgBpm) > 20.0f) {
-                consecutiveIrregularCount++;
-                if (consecutiveIrregularCount >= 3) {
-                    irregularRhythmAlert = true;
-                }
-            } else {
-                if (consecutiveIrregularCount > 0) consecutiveIrregularCount--;
-                if (consecutiveIrregularCount == 0) irregularRhythmAlert = false;
-            }
-        }
-    } else if (acFilteredIR < (peakThreshold * 0.4f)) {
-        aboveThreshold = false;
+float medianPulseIbi() {
+    float s[PULSE_IBI_COUNT];
+    for (int i = 0; i < pulseIbiFilled; i++) s[i] = pulseIbis[i];
+    for (int i = 1; i < pulseIbiFilled; i++) {        // insertion sort, <= 8 items
+        float v = s[i]; int j = i - 1;
+        while (j >= 0 && s[j] > v) { s[j + 1] = s[j]; j--; }
+        s[j + 1] = v;
     }
+    return (pulseIbiFilled % 2) ? s[pulseIbiFilled / 2]
+                                : 0.5f * (s[pulseIbiFilled / 2 - 1] + s[pulseIbiFilled / 2]);
+}
+
+/**
+ * @brief Local pulse-rate estimate for the OLED readout, one call per sample.
+ * Keeps working when the Pi is detached; it never classifies rhythm.
+ */
+void processLocalPulse(uint32_t ir) {
+    static uint16_t lowCount = 0;
+    static uint32_t lastGoodIr = 0;
+    if (ir < FINGER_PRESENT_IR_THRESHOLD) {
+        if (!pulseFingerOn) return;
+        if (++lowCount >= PULSE_LOSS_SAMPLES) { pulseFingerOn = false; resetPulseEstimator(); return; }
+        ir = lastGoodIr;                  // brief slip: hold the last value, keep timing intact
+    } else {
+        lowCount = 0;
+        lastGoodIr = ir;
+    }
+    if (!pulseFingerOn) { pulseFingerOn = true; resetPulseEstimator(); pulseIrSeed = ir; }
+
+    // Invert: reflected IR dips as blood volume rises, so systole becomes a peak.
+    float y = -pulseLowPass.step(pulseHighPass.step((float)ir - pulseIrSeed));
+    pulseN++;
+    pulseWin[pulseWinPos] = fabsf(y);
+    pulseWinPos = (pulseWinPos + 1) % PULSE_WIN;
+
+    if (pulseN > PULSE_SETTLE_SAMPLES) {
+        float peakSwing = 0;
+        for (int i = 0; i < PULSE_WIN; i++) if (pulseWin[i] > peakSwing) peakSwing = pulseWin[i];
+
+        bool isPeak = (pulseY1 > pulseY2) && (pulseY1 >= y) && (pulseY1 > 0.5f * peakSwing);
+        bool refractoryOk = (pulseLastPeakN == 0) ||
+                            (pulseN - 1 - pulseLastPeakN >= PULSE_REFRACTORY_SAMPLES);
+        if (isPeak && refractoryOk) {
+            float denom = pulseY2 - 2.0f * pulseY1 + y;
+            float delta = (denom != 0) ? 0.5f * (pulseY2 - y) / denom : 0;
+            delta = constrain(delta, -0.5f, 0.5f);
+            float peakT = (float)(pulseN - 1) + delta;
+            pulseLastPeakN = pulseN - 1;
+            if (pulseLastPeakT >= 0) {
+                float ibiMs = (peakT - pulseLastPeakT) * 1000.0f / SAMPLING_RATE_HZ;
+                if (ibiMs >= 300.0f && ibiMs <= 2000.0f) {
+                    pulseIbis[pulseIbiPos] = ibiMs;
+                    pulseIbiPos = (pulseIbiPos + 1) % PULSE_IBI_COUNT;
+                    if (pulseIbiFilled < PULSE_IBI_COUNT) pulseIbiFilled++;
+                    if (pulseIbiFilled >= 2) pulseBpm = 60000.0f / medianPulseIbi();
+                }
+            }
+            pulseLastPeakT = peakT;
+        }
+
+        if (pulseLastPeakN && (pulseN - pulseLastPeakN > PULSE_NO_BEAT_SAMPLES)) {
+            pulseBpm = 0.0f; pulseIbiFilled = 0; pulseIbiPos = 0;
+            pulseLastPeakT = -1; pulseLastPeakN = 0;
+        }
+    }
+    pulseY2 = pulseY1;
+    pulseY1 = y;
 }
 
 /**
@@ -192,9 +257,7 @@ void updateOled(uint32_t nowMs) {
     display.setCursor(0, 0);
     display.print("UE 3CPE-2A | 100Hz");
 
-    // Finger placement detection threshold (~50,000 raw counts on MAX30102 IR)
-    uint32_t lastIr = ringBuffer[(rbHead - 1) & (RING_BUFFER_SIZE - 1)].ir;
-    if (lastIr < FINGER_PRESENT_IR_THRESHOLD) {
+    if (!pulseFingerOn) {
         display.setCursor(10, 24);
         display.setTextSize(1);
         display.print("PLACE FINGER/WRIST");
@@ -204,29 +267,20 @@ void updateOled(uint32_t nowMs) {
         return;
     }
 
-    // BPM Readout
-    display.setCursor(0, 16);
-    display.setTextSize(1);
-    display.print("PULSE RATE:");
-
-    display.setCursor(0, 28);
-    display.setTextSize(2);
-    if (avgBpm > 30.0f && avgBpm < 220.0f) {
-        display.printf("%3.0f", avgBpm);
-        display.setTextSize(1);
-        display.print(" BPM");
+    // Pulse rate only. The rhythm verdict comes from ibi_af_v1 on the Pi.
+    display.setCursor(0, 18);
+    display.setTextSize(4);
+    if (pulseBpm > 30.0f && pulseBpm < 220.0f) {
+        display.printf("%3d", (int)(pulseBpm + 0.5f));
     } else {
-        display.print("-- BPM");
+        display.print(" --");
     }
-
-    // Arrhythmia Alert Indicator (Local Fallback)
-    display.setCursor(0, 50);
     display.setTextSize(1);
-    if (irregularRhythmAlert) {
-        display.print("[!] IRREGULAR RHYTHM");
-    } else {
-        display.print("STATUS: NSR (NORMAL)");
-    }
+    display.setCursor(76, 40);
+    display.print("BPM");
+
+    display.setCursor(0, 56);
+    display.print("Rhythm: see dashboard");
 
     display.display();
 }
@@ -238,6 +292,8 @@ void setup() {
     while (!Serial && (millis() - serialStart < 2500)) {
         delay(10);
     }
+
+    resetPulseEstimator();
 
     // Initialize I2C Bus on ESP32-C3 designated GPIO pins (SDA=8, SCL=9)
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
@@ -281,32 +337,21 @@ void setup() {
 }
 
 void loop() {
-    static uint32_t lastSampleTimeUs = 0;
-    uint32_t currentUs = micros();
     uint32_t nowMs = millis();
 
-    // Deterministic 100 Hz Sampling Loop (every 10,000 us)
-    if (currentUs - lastSampleTimeUs >= SAMPLE_INTERVAL_US) {
-        lastSampleTimeUs += SAMPLE_INTERVAL_US;
-        if (currentUs - lastSampleTimeUs > SAMPLE_INTERVAL_US) {
-            // Guard against timer overflow / micros() jitter
-            lastSampleTimeUs = currentUs;
-        }
-
-        // Read raw 18-bit samples from the MAX30102 FIFO.
-        //
-        // IMPORTANT: do NOT use getIR()/getRed() here. Each of those calls
-        // safeCheck(), which blocks until a *new* sample lands in the FIFO, so
-        // calling both consumes two sensor samples per loop pass and halves the
-        // effective rate to 50 Hz (measured 49.8 Hz before this fix). The whole
-        // DSP chain is configured for fs = 100 Hz, so that silently doubles every
-        // reported BPM/IBI and shifts the Butterworth cutoffs.
-        //
-        // Instead pull one FIFO entry and read both channels from it.
-        particleSensor.check();
-        if (!particleSensor.available()) {
-            return; // no new sample yet; try again next pass
-        }
+    // The MAX30102's own 100 Hz clock is the sample clock: drain every sample
+    // waiting in its FIFO on each pass and send each one. A micros() ticker
+    // that reads one sample per 10 ms tick drops ticks whenever the OLED redraw
+    // (~23 ms at 400 kHz) runs, the 32-deep FIFO then overflows, and the Pi
+    // receives ~90 samples/s while its DSP assumes 100 — shortening every
+    // inter-beat interval that ibi_af_v1 consumes.
+    //
+    // Do NOT use getIR()/getRed() here: each calls safeCheck(), which blocks
+    // for a *new* sample, so calling both consumes two samples per pass and
+    // halves the rate (measured 49.8 Hz before that fix). Read both channels
+    // from one FIFO entry instead.
+    particleSensor.check();
+    while (particleSensor.available()) {
         uint32_t irVal  = particleSensor.getFIFOIR();
         uint32_t redVal = particleSensor.getFIFORed();
         particleSensor.nextSample();
@@ -317,8 +362,8 @@ void loop() {
         ringBuffer[rbHead].red = redVal;
         rbHead = (rbHead + 1) & (RING_BUFFER_SIZE - 1);
 
-        // Process on-board heuristic for local OLED display
-        processLocalPeak(irVal, nowMs);
+        // Local pulse-rate estimate for the OLED readout
+        processLocalPulse(irVal);
 
         // Dequeue and transmit framed binary packet to Raspberry Pi
         if (rbTail != rbHead) {
@@ -341,12 +386,10 @@ void loop() {
             // low-amplitude ambient noise, and the threshold peak detector will
             // lock onto it and emit a plausible-looking heart rate. Sending 0
             // means "unknown" so the Pi never receives an invented vital sign.
-            if (sample.ir < FINGER_PRESENT_IR_THRESHOLD) {
-                currentBpm = 0.0f;
-                for (uint8_t i = 0; i < BPM_HISTORY_SIZE; i++) bpmHistory[i] = 0.0f;
+            if (sample.ir < FINGER_PRESENT_IR_THRESHOLD || !pulseFingerOn) {
                 packet.heuristic_bpm_x10 = 0;
             } else {
-                packet.heuristic_bpm_x10 = (uint16_t)(currentBpm * 10.0f);
+                packet.heuristic_bpm_x10 = (uint16_t)(pulseBpm * 10.0f + 0.5f);
             }
 
             // Compute CRC-16-CCITT over 15-byte payload (bytes 1 to 15)

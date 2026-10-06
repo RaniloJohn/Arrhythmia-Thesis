@@ -192,8 +192,8 @@ class IBIAFClassifier:
         heat = np.zeros(int(n_samples), dtype=np.float64)
         intervals: List[Dict[str, Any]] = []
         if valid.sum() < 3:
-            return {"logit": base_logit, "intervals": intervals, "heatmap": heat,
-                    "insufficient_beats": True}
+            return {"logit": base_logit, "median_ibi_s": None, "intervals": intervals,
+                    "top_intervals": [], "heatmap": heat, "insufficient_beats": True}
 
         median_ibi = float(np.median(ibi[valid]))
         for j in range(len(ibi)):

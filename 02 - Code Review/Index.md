@@ -21,6 +21,7 @@ File names: `YYYY-MM-DD - <component>.md`. This is where Claude Code review sess
 | 2026-09-13 | [[2026-09-13 - 1D-CNN Training Results & Honest Performance Bounds|1D-CNN Training Results & Honest Performance Bounds]] | Antigravity (DeepMind) | superseded — see 2026-10-01 audit |
 | 2026-10-01 | [[2026-10-01 - 1D-CNN Training Audit - Label-Subject Collinearity and Invalid Weights|1D-CNN Training Audit - Label/Subject Collinearity and Invalid Weights]] | Claude (Opus 5) | open |
 | 2026-10-01 | [[2026-10-01 - ML Rebuild - Working AF Classifier and Chapter 2 Topology Amendment|ML Rebuild - Working AF Classifier & Chapter 2 Topology Amendment]] | Claude (Opus 5) | delivered |
+| 2026-10-06 | [[2026-10-06 - First Live Sensor Run - Runner Crash, Sample Drops and False AF on Device|First Live Sensor Run - Runner Crash, Sample Drops & False AF on Device]] | Claude (Opus 5.5) | open |
 
 ## Architectural Audits
 

@@ -188,6 +188,8 @@ Resolved items are deleted, not archived, so stale figures cannot be re-quoted f
       MIMIC external-validity caveat (35 critically-ill ICU adults) to Ch. 1 Limitations.
 
 **Engineering / deployment**
+- [ ] **On-device false AF** (2026-10-06): chain verified end-to-end, but `ibi_af_v1` flags a resting
+      non-AF fingertip as AF from bad beat detection. Needs steady contact + morphology SQI.
 - [ ] **Hardware verification** (`PLAN.md` §7): ESP32-C3 into the Pi, restart both services,
       confirm a real waveform and a live `ibi_af_v1` decision in the dashboard.
 - [ ] **Fabric channel/chaincode contract** undefined — blocks `sync_worker.py`.
@@ -215,6 +217,17 @@ Short lines only; promote anything substantial to a real note and link it here.
 ---
 
 ## Session log
+
+### 2026-10-06 (later) — Claude (Opus 5.5): first live sensor run — chain works, AF calls are false
+- Hardware: sensor and OLED were both wired SDA/SCL-swapped; fixed by the team, both now on 8/9.
+- Fixed firmware sample drops (~10%) that appear once the OLED is live (FIFO drain; 100.1 Hz
+  verified) and removed the OLED's unvalidated "NSR (NORMAL)" rhythm verdict.
+- Fixed runner crash (`KeyError 'top_intervals'`) and stopped it classifying all-zero
+  features → new `insufficient_beats` invalid reason. Regression tests added.
+- **`ibi_af_v1` calls a resting non-AF fingertip AF (P 62–98%)**: weak pulse + unsteady bare-
+  finger contact → wrong beats → irregular IBIs. Polarity ruled out. Do not raise τ. Next:
+  steady contact + morphology SQI. False events now in the ledger under `PAT-CAL-001`.
+  Note: `02 - Code Review/2026-10-06 - First Live Sensor Run - ...`.
 
 ### 2026-10-06 — Claude (Opus 5.5): deployed `ibi_af_v1` to the Pi
 - Pi checkout was **not a git repo** (copied over, Sept code: untrained CNN + old SQI bug). Made it

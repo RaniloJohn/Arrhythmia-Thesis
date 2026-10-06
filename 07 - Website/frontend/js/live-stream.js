@@ -41,7 +41,8 @@ class LiveStreamManager {
     const reasons = {
       no_skin_contact: 'No skin contact — place finger or wrist on the sensor',
       low_signal_quality: 'Signal quality too low for a reliable measurement',
-      no_pulse_detected: 'Sensor in contact, but no pulse could be resolved'
+      no_pulse_detected: 'Sensor in contact, but no pulse could be resolved',
+      insufficient_beats: 'Too few clean beats to assess rhythm — hold still'
     };
     const message = reasons[data.invalid_reason] || 'No valid measurement';
 

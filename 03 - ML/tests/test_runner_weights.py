@@ -121,3 +121,22 @@ def test_cnn_path_is_reported_as_unvalidated(repo_weights_path):
     assert payload["model_trained"] is False
     assert payload["model_validated_subject_auroc"] is None
     assert payload["decision_threshold"] == pytest.approx(0.37, abs=0.01)
+
+
+def test_too_few_beats_is_an_invalid_measurement_not_a_crash(repo_weights_path, monkeypatch):
+    """
+    Regression (2026-10-06, first run on real sensor data): a contacted window with only a
+    couple of resolvable beats crashed the service with KeyError 'top_intervals', and would
+    otherwise have classified an all-zero feature vector. It must be published as an
+    invalid measurement, with no AF probability and no ledger event.
+    """
+    import numpy as np
+    runner = _prefilled_runner(weights_path=repo_weights_path)
+    monkeypatch.setattr(runner.peak_detector, "detect_peaks",
+                        lambda filtered: np.array([100, 180, 260]))
+    payload = runner.process_window()
+    assert payload["measurement_valid"] is False
+    assert payload["invalid_reason"] == "insufficient_beats"
+    assert payload["af_probability"] is None
+    assert payload["af_detected"] is None
+    assert payload["event_id"] is None

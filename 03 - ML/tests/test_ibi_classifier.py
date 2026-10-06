@@ -172,3 +172,14 @@ def test_predict_before_load_raises():
 
 def test_rate_features_are_a_subset_of_feature_names():
     assert set(RATE_FEATURES) <= set(FEATURE_NAMES)
+
+
+@needs_weights
+def test_interval_attribution_schema_is_stable_with_too_few_beats():
+    """The insufficient-beats branch must expose the same keys callers read."""
+    clf = IBIAFClassifier().load(WEIGHTS)
+    full = clf.explain_intervals(np.concatenate([[0], np.cumsum(np.full(11, 0.8)) * 100]))
+    short = clf.explain_intervals(np.array([0, 80, 160]))
+    assert short["insufficient_beats"] is True
+    assert set(full) <= set(short)
+    assert short["top_intervals"] == []

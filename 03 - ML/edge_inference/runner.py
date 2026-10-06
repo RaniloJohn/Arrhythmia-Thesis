@@ -406,14 +406,19 @@ class EdgeInferenceRunner:
         # If no pulse can be resolved from a contacted, good-quality window, report
         # that honestly as None rather than substituting a default heart rate.
         current_bpm = peak_res["bpm"] if peak_res["bpm"] > 0 else None
-        if current_bpm is None:
+        # A rhythm needs at least 3 usable intervals. With fewer, the IBI features are all
+        # zeros, which means "insufficient quality", not "non-AF": classifying that vector
+        # would turn an arbitrary score into an AF probability (and possibly a ledger event).
+        ibi_feats = ibi_features_from_peaks(np.asarray(peaks_idx), 100.0)
+        rhythm_resolvable = bool(np.any(ibi_feats))
+        if current_bpm is None or (self.classifier_kind == "ibi" and not rhythm_resolvable):
             telemetry_payload = {
                 "ts": ts_latest,
                 "iso_time": datetime.now(timezone.utc).isoformat(),
                 "patient_id": self.patient_id,
                 "device_id": self.device_id,
                 "measurement_valid": False,
-                "invalid_reason": "no_pulse_detected",
+                "invalid_reason": "no_pulse_detected" if current_bpm is None else "insufficient_beats",
                 "median_ir": round(median_ir, 1),
                 "bpm": None,
                 "af_detected": None,
@@ -438,7 +443,7 @@ class EdgeInferenceRunner:
         #    `--classifier cnn` keeps the 1D-CNN + Grad-CAM path available for comparison.
         t_ml_start = time.perf_counter_ns()
         if self.classifier_kind == "ibi":
-            feats = ibi_features_from_peaks(np.asarray(peaks_idx), 100.0)
+            feats = ibi_feats
             af_prob, af_detected, _ = self.ibi_model.predict_from_features(feats)
             expl = self.ibi_model.explain_intervals(np.asarray(peaks_idx), 100.0,
                                                     n_samples=len(normalized))
