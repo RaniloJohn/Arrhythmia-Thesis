@@ -52,7 +52,7 @@ else
 fi
 
 echo "== 4/5 Restart edge service"
-sudo -n systemctl restart arrhythmia-edge.service
+sudo systemctl restart arrhythmia-edge.service
 sleep 8
 systemctl is-active arrhythmia-edge.service
 

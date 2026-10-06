@@ -50,7 +50,7 @@ Long-form output still goes to `05 - Claude Notes/` (Claude) or `06 - Antigravit
 | 1D-CNN (Ch. 2 topology) | ❌ **structurally unable to detect AF as written — amendment recommended** (settled decision 11). Receptive field is 12 samples (0.12 s); an inter-beat interval is 60–120. Subject AUROC **0.533** as written → **0.842–0.849 (fold 0.883 ± 0.145)** at a 6.86 s receptive field. Recommended amendment: kernels 127/63, pooling 8/8, `Flatten` → **global average pooling** (plain GAP matches mean+std pooling once the receptive field is adequate, and is the canonical Grad-CAM setting). Still ~0.12 below the 12-parameter feature model. **`cnn_af_v1.npz` was never validly trained — never cite it.** |
 | Interpretability (RQ3) | ✅ **answered**: exact per-feature contributions (`explain`) + faithful beat-level counterfactual attribution (`explain_intervals`, emits a 1000-sample heat strip the dashboard renders unchanged). CNN Grad-CAM implemented for all heads with closed-form gradients verified vs autograd — but the v1 *clinical plausibility verdict* stays void. |
 | SQLite + SHA-256 backward hash chain (WAL) | ✅ built & independently verified |
-| Edge runner — real serial auto-detect + retry, TCP pub/sub :5051 | ✅ built; now defaults to `ibi_af_v1` (`--classifier ibi|cnn`). `model_trained` is gated on a validated subject-AUROC floor, so the CNN path always reports `model_trained: false`. 3-of-5 consensus; latency budget met with ~4x headroom. |
+| Edge runner — real serial auto-detect + retry, TCP pub/sub :5051 | ✅ **`ibi_af_v1` live on the Pi since 2026-10-06** (journal: `VALIDATED=True`, AUROC 0.9704). Defaults to `ibi_af_v1` (`--classifier ibi|cnn`). `model_trained` is gated on a validated subject-AUROC floor, so the CNN path always reports `model_trained: false`. 3-of-5 consensus; latency budget met with ~4x headroom. |
 | Website — Express API, bcrypt+JWT+RBAC, WS `/ws/live`, patient CRUD, event ledger, Grad-CAM heat-strip | ✅ built, 32/32 tests pass |
 | Deployment — systemd units, auto-start on Pi boot | ✅ built, reboot-tested |
 | Hyperledger Fabric sync worker | ⏸️ **deferred** — `sync_status` column exists, nothing flips it |
@@ -215,6 +215,19 @@ Short lines only; promote anything substantial to a real note and link it here.
 ---
 
 ## Session log
+
+### 2026-10-06 — Claude (Opus 5.5): deployed `ibi_af_v1` to the Pi
+- Pi checkout was **not a git repo** (copied over, Sept code: untrained CNN + old SQI bug). Made it
+  one in place; the 3 modified files were hash-matched to old commits (no Pi-only edits) before overwrite.
+- **Pi had no internet** — eth0 is cabled to the Windows laptop (ICS `192.168.137.1` gives no DHCP);
+  reached only via IPv6 link-local `raspberrypi.local`, which drops repeatedly. Code moved by
+  `git bundle` + `scp`. Tailscale is not installed on the laptop; `CREDENTIALS.md` is absent.
+- `arrhythmia-edge.service` restarted → `IBI classifier loaded: ibi_af_v1 | VALIDATED=True`.
+  Classifier-only on the Pi: **0.37 ms/call** (full-pipeline latency still not measured on the Pi).
+- Found: passwordless `sudo -n` restart no longer works; pytest not installed on the Pi; Pi clock
+  ~1 day behind (no NTP offline); target is still fabricated patient `PAT-CAL-001`.
+- Added `03 - ML/deploy/deploy_ibi_on_pi.sh`. **Next:** confirm serial frames + a live decision
+  in the dashboard (`PLAN.md` §7), measure Pi latency, fix the Pi's eth0 profile/network.
 
 ### 2026-10-01 (later) — Claude (Opus 5), as ML lead: rebuilt the ML pipeline; there is now a working classifier
 - **Delivered `ibi_af_v1`**: 12 interval-irregularity features → logistic regression, pure
