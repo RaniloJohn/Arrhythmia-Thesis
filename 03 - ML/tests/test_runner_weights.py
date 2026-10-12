@@ -18,6 +18,12 @@ from unittest.mock import patch
 from edge_inference.runner import EdgeInferenceRunner, SyntheticPPGGenerator
 
 
+@pytest.fixture(autouse=True)
+def _isolated_raw_capture(tmp_path, monkeypatch):
+    """Keep the runner's AF auto-capture out of the real device_captures folder."""
+    monkeypatch.setenv("RAW_CAPTURE_DIR", str(tmp_path / "captures"))
+
+
 @pytest.fixture
 def repo_weights_path():
     p = Path(__file__).resolve().parent.parent / "model" / "weights" / "cnn_af_v1.npz"
@@ -245,3 +251,39 @@ def test_ppg_is_inverted_before_beat_detection(repo_weights_path, monkeypatch):
     assert np.corrcoef(seen["f"], raw - raw.mean())[0, 1] < -0.5
     assert payload.get("measurement_valid", True) is True
     assert payload["af_probability"] is not None
+
+
+def test_af_call_saves_raw_window_once_per_window_length(repo_weights_path, monkeypatch, tmp_path):
+    """Each AF call leaves its raw evidence on disk, rate-limited to non-overlapping windows."""
+    import numpy as np
+    runner = _prefilled_runner(weights_path=repo_weights_path)
+    monkeypatch.setattr(runner.db, "record_event", lambda **kw: {"event_id": "e"})
+    monkeypatch.setattr(runner.ibi_model, "predict_from_features", lambda f: (0.9, 1, 2.0))
+    monkeypatch.setattr("edge_inference.runner.beat_morphology_sqi",
+                        lambda *a, **k: {"is_valid": True, "good_fraction": 1.0,
+                                         "undetected_pulses": 0})
+    W = runner.window_size
+    runner.sample_count = 10 * W
+    runner.process_window()
+    runner.sample_count += 100           # next 1 s-stride window: overlapping, not saved
+    runner.process_window()
+    files = sorted((tmp_path / "captures").glob("af_*.npz"))
+    assert len(files) == 1
+    z = np.load(files[0])
+    assert z["ir"].shape == (W,) and z["af_probability"] == pytest.approx(0.9)
+    assert bool(z["ppg_inverted"]) is True and z["peaks"].size > 0
+    runner.sample_count += W             # a full window later: saved
+    runner.process_window()
+    assert len(list((tmp_path / "captures").glob("af_*.npz"))) == 2
+
+
+def test_capture_failure_never_breaks_the_pipeline(repo_weights_path, monkeypatch):
+    runner = _prefilled_runner(weights_path=repo_weights_path)
+    monkeypatch.setattr(runner.ibi_model, "predict_from_features", lambda f: (0.9, 1, 2.0))
+    monkeypatch.setattr("edge_inference.runner.beat_morphology_sqi",
+                        lambda *a, **k: {"is_valid": True, "good_fraction": 1.0,
+                                         "undetected_pulses": 0})
+    monkeypatch.setattr("edge_inference.runner.np.savez_compressed",
+                        lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+    payload = runner.process_window()
+    assert payload["af_detected"] == 1

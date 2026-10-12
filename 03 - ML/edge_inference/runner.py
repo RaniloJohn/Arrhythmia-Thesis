@@ -154,7 +154,8 @@ def format_window_summary(res: dict) -> str:
     lat = res.get("latencies", {})
     return (f"BPM={res['bpm']} | AF_Prob={res['af_probability']:.2%} | "
             f"AF={res['af_detected']} | SQI={res['sqi']['sqi_score']} | "
-            f"Infer={lat.get('inference_ms')}ms (<25ms: {lat.get('budget_met')})"
+            f"Infer={lat.get('inference_ms')}ms | DSP={lat.get('dsp_ms')}ms | "
+            f"Total={lat.get('total_edge_ms')}ms (<25ms: {lat.get('budget_met')})"
             f"{_beat_shape_note(res)}")
 
 
@@ -209,6 +210,17 @@ class EdgeInferenceRunner:
         # polarity ran on a signal too noisy to tell either way.) Raw counts are still used
         # for the contact, saturation and perfusion checks; only the DSP path is inverted.
         self.invert_ppg = os.environ.get("PPG_INVERT", "1") != "0"
+        # Raw evidence for every AF call: the 10 s raw window, detected peaks and scores are
+        # saved so each false alarm can be diagnosed from its own signal. Set
+        # RAW_CAPTURE_DIR=off to disable. Recordings are personal data and are gitignored.
+        cap = os.environ.get("RAW_CAPTURE_DIR", "").strip()
+        self.raw_capture_dir: Optional[Path] = (
+            None if cap.lower() in ("off", "0", "none") else
+            Path(cap) if cap else
+            Path(__file__).resolve().parent.parent / "data" / "device_captures" / "auto")
+        self.raw_capture_max_files = int(os.environ.get("RAW_CAPTURE_MAX_FILES", "2000"))
+        self.last_capture_sample: Optional[int] = None
+        self._capture_warned = False
 
         self.bp_filter = ButterBandpassFilter(lowcut=0.5, highcut=5.0, fs=100.0, order=4)
         self.sqi_assessor = SignalQualityAssessor()
@@ -351,6 +363,45 @@ class EdgeInferenceRunner:
         picked = [self.window_flags.get(now - j * self.window_size)
                   for j in range(self.consensus_window_size)]
         return int(sum(1 for f in picked if f == 1) >= self.consensus_k)
+
+    def _capture_af_window(self, raw_ir: np.ndarray, raw_red: np.ndarray, peaks: np.ndarray,
+                           af_prob: float, consensus_af: int, bpm: Optional[float],
+                           sqi_res: Dict[str, Any]) -> Optional[Path]:
+        """Save the raw window behind an AF call (at most one per window length, capped).
+
+        Never raises: a full disk or a permissions problem must not stop the monitor.
+        """
+        if self.raw_capture_dir is None:
+            return None
+        if (self.last_capture_sample is not None
+                and self.sample_count - self.last_capture_sample < self.window_size):
+            return None
+        try:
+            self.raw_capture_dir.mkdir(parents=True, exist_ok=True)
+            existing = sorted(self.raw_capture_dir.glob("af_*.npz"))
+            if len(existing) >= self.raw_capture_max_files:
+                return None
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+            path = self.raw_capture_dir / f"af_{stamp}_{self.sample_count}.npz"
+            np.savez_compressed(
+                path,
+                ir=np.asarray(raw_ir, dtype=np.int64), red=np.asarray(raw_red, dtype=np.int64),
+                timestamp_ms=np.asarray(self.timestamps_buffer, dtype=np.int64),
+                peaks=np.asarray(peaks, dtype=np.int64),
+                af_probability=float(af_prob), af_consensus=int(consensus_af),
+                bpm=float(bpm) if bpm is not None else float("nan"),
+                ppg_inverted=bool(self.invert_ppg),
+                meta=json.dumps({"patient_id": self.patient_id, "device_id": self.device_id,
+                                 "model_version": self.ibi_model.model_version,
+                                 "sample_count": self.sample_count, "sqi": sqi_res},
+                                default=str))
+            self.last_capture_sample = self.sample_count
+            return path
+        except Exception as err:  # noqa: BLE001 — capture is best-effort by design
+            if not self._capture_warned:
+                print(f"[Edge Runner WARNING] raw AF capture failed (will keep retrying silently): {err}")
+                self._capture_warned = True
+            return None
 
     def ingest_sample(self, ts_ms: int, ir_val: int, red_val: int) -> Optional[Dict[str, Any]]:
         """
@@ -515,6 +566,9 @@ class EdgeInferenceRunner:
         inference_latency_ms = (t_ml_end - t_ml_start) / 1_000_000.0
 
         consensus_af = self._record_window_flag(int(af_detected))
+        if af_detected:
+            self._capture_af_window(raw_ir, raw_red, np.asarray(peaks_idx), af_prob,
+                                    consensus_af, current_bpm, sqi_res)
 
         # 5. Cryptographic Hash Chaining Persistence.
         #    Only a consensus AF decision is a ledger event — a single 10 s window must never
@@ -582,7 +636,10 @@ class EdgeInferenceRunner:
                 "inference_ms": round(inference_latency_ms, 2),
                 "total_edge_ms": round(total_latency_ms, 2),
                 "budget_ms": 25.0,
-                "budget_met": bool(inference_latency_ms < 25.0)
+                # The 25 ms budget is stated for the whole edge pipeline, so it is judged on
+                # the end-to-end window time (DSP, quality gates, peaks, classification,
+                # explanation, and any ledger write or raw capture), not inference alone.
+                "budget_met": bool(total_latency_ms < 25.0)
             }
         }
 
