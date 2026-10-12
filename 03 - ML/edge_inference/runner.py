@@ -37,7 +37,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from storage.db_manager import DatabaseManager
 from signal_processing.filter import ButterBandpassFilter, detrend_ppg, zscore_normalize
-from signal_processing.sqi import SignalQualityAssessor
+from signal_processing.sqi import SignalQualityAssessor, beat_morphology_sqi, is_saturated
 from signal_processing.peak_detection import ElgendiPeakDetector
 from model.inference_model import Arrhythmia1DCNN
 from model.grad_cam import GradCAM1D
@@ -123,8 +123,10 @@ class SyntheticPPGGenerator:
         # Add respiratory baseline wander (0.25 Hz)
         wander = 400.0 * np.sin(2 * np.pi * 0.25 * self.t)
         ir_ac = pulse * 1800.0
-        ir_total = int(self.dc_baseline + wander + ir_ac)
-        red_total = int(self.dc_baseline * 0.85 + wander * 0.85 + ir_ac * 0.80)
+        # Emulate the real MAX30102: reflected light DIPS with each pulse (the runner
+        # inverts it back, see PPG_INVERT).
+        ir_total = int(self.dc_baseline + wander - ir_ac)
+        red_total = int(self.dc_baseline * 0.85 + wander * 0.85 - ir_ac * 0.80)
 
         now_ms = int(time.time() * 1000)
         return {
@@ -146,12 +148,21 @@ def format_window_summary(res: dict) -> str:
     if not res.get("measurement_valid", True):
         return (f"NO MEASUREMENT ({res.get('invalid_reason', 'unknown')}) | "
                 f"median_IR={res.get('median_ir')} | "
-                f"SQI={res.get('sqi', {}).get('sqi_score')}")
+                f"SQI={res.get('sqi', {}).get('sqi_score')}"
+                f"{_beat_shape_note(res)}")
 
     lat = res.get("latencies", {})
     return (f"BPM={res['bpm']} | AF_Prob={res['af_probability']:.2%} | "
             f"AF={res['af_detected']} | SQI={res['sqi']['sqi_score']} | "
-            f"Infer={lat.get('inference_ms')}ms (<25ms: {lat.get('budget_met')})")
+            f"Infer={lat.get('inference_ms')}ms (<25ms: {lat.get('budget_met')})"
+            f"{_beat_shape_note(res)}")
+
+
+def _beat_shape_note(res: dict) -> str:
+    m = (res.get("sqi") or {}).get("beat_morphology")
+    if not m:
+        return ""
+    return f" | BeatShape={m['good_fraction']:.2f} missed={m['undetected_pulses']}"
 
 
 class EdgeInferenceRunner:
@@ -189,6 +200,15 @@ class EdgeInferenceRunner:
         # rise well above 50,000 on contact.
         self.contact_ir_threshold = float(os.environ.get("CONTACT_IR_THRESHOLD", "50000"))
         self.min_sqi_score = float(os.environ.get("MIN_SQI_SCORE", "0.7"))
+        # Reflectance PPG polarity. The MAX30102 reports reflected light, which DIPS as blood
+        # volume rises, so each heartbeat is a sharp fall in raw counts. ibi_af_v1 was trained
+        # on bedside pleth (MIMIC), which is displayed systole-up, and the Elgendi detector
+        # and beat-morphology gate both look for a sharp upstroke + peak. On 2026-10-12 radial
+        # wrist captures, inverting raised the beat-shape pass rate 0.69 -> 0.92 and turned the
+        # pre-flash capture from 3 AF calls to none. (The 2026-10-06 test that "ruled out"
+        # polarity ran on a signal too noisy to tell either way.) Raw counts are still used
+        # for the contact, saturation and perfusion checks; only the DSP path is inverted.
+        self.invert_ppg = os.environ.get("PPG_INVERT", "1") != "0"
 
         self.bp_filter = ButterBandpassFilter(lowcut=0.5, highcut=5.0, fs=100.0, order=4)
         self.sqi_assessor = SignalQualityAssessor()
@@ -256,10 +276,16 @@ class EdgeInferenceRunner:
             print("!" * 78 + "\n")
             self.classifier_kind = "cnn"
 
-        # Consensus tracking buffer (rolling window of 5 decisions for temporal stability)
-        self.decision_history: List[int] = []
-        self.consensus_window_size: int = 5
-        self.consensus_k: int = 3  # 3 out of 5 majority
+        # Temporal consensus: k of the last n NON-OVERLAPPING windows (one per window length,
+        # i.e. 5 x 10 s = 50 s of signal), which is how the validated subject-level figures
+        # (sens 100% / spec 93.8%) were computed. Windows are produced every second and
+        # overlap 90%, so taking 5 consecutive ones (the previous behaviour) voted on ~14 s
+        # of largely shared signal. Invalid windows are recorded as None and count as not-AF,
+        # so AF calls separated by minutes of rejected signal cannot accumulate into an alarm.
+        self.window_flags: Dict[int, Optional[int]] = {}
+        self.consensus_window_size: int = int(getattr(self.ibi_model, "consensus_n", 5) or 5)
+        self.consensus_k: int = int(getattr(self.ibi_model, "consensus_k", 3) or 3)
+        self.last_event_sample: Optional[int] = None
 
         # Buffers
         self.raw_ir_buffer: List[int] = []
@@ -315,6 +341,17 @@ class EdgeInferenceRunner:
         except Exception:
             pass
 
+    def _record_window_flag(self, flag: Optional[int]) -> int:
+        """Store this window's decision (None = invalid) and return the k-of-n consensus."""
+        now = self.sample_count
+        self.window_flags[now] = flag
+        span = self.window_size * self.consensus_window_size
+        for key in [k for k in self.window_flags if k <= now - span]:
+            del self.window_flags[key]
+        picked = [self.window_flags.get(now - j * self.window_size)
+                  for j in range(self.consensus_window_size)]
+        return int(sum(1 for f in picked if f == 1) >= self.consensus_k)
+
     def ingest_sample(self, ts_ms: int, ir_val: int, red_val: int) -> Optional[Dict[str, Any]]:
         """
         Ingests a single 100 Hz sample. When window reaches window_size (1000)
@@ -349,7 +386,7 @@ class EdgeInferenceRunner:
 
         # 1. DSP Stage: Detrending + Zero-Phase Butterworth Bandpass Filter (0.5 - 5.0 Hz)
         t_dsp_start = time.perf_counter_ns()
-        detrended = detrend_ppg(raw_ir)
+        detrended = detrend_ppg(-raw_ir if self.invert_ppg else raw_ir)
         filtered = self.bp_filter.apply(detrended)
         normalized = zscore_normalize(filtered)
         t_dsp_end = time.perf_counter_ns()
@@ -370,9 +407,14 @@ class EdgeInferenceRunner:
         median_ir = float(np.median(raw_ir)) if len(raw_ir) else 0.0
         contact = median_ir >= self.contact_ir_threshold
         quality_ok = bool(sqi_res.get("sqi_score", 0.0) >= self.min_sqi_score)
+        # A saturated window (finger pressed hard enough to clip the IR ADC) carries no pulse,
+        # yet the detector still "finds" beats in it and reported 25-50 bpm with a confident
+        # non-AF score on 2026-10-12. It is checked after contact, since saturation implies it.
+        saturated = is_saturated(raw_ir)
 
-        if not contact or not quality_ok:
-            reason = "no_skin_contact" if not contact else "low_signal_quality"
+        if not contact or saturated or not quality_ok:
+            reason = ("no_skin_contact" if not contact else
+                      "sensor_saturated" if saturated else "low_signal_quality")
             telemetry_payload = {
                 "ts": ts_latest,
                 "iso_time": datetime.now(timezone.utc).isoformat(),
@@ -394,6 +436,7 @@ class EdgeInferenceRunner:
                 "raw_window": [],
                 "gradcam_weights": [],
                 "event_id": None,
+                "af_consensus": self._record_window_flag(None),
             }
             self.broadcast_telemetry(telemetry_payload)
             return telemetry_payload
@@ -411,14 +454,25 @@ class EdgeInferenceRunner:
         # would turn an arbitrary score into an AF probability (and possibly a ledger event).
         ibi_feats = ibi_features_from_peaks(np.asarray(peaks_idx), 100.0)
         rhythm_resolvable = bool(np.any(ibi_feats))
-        if current_bpm is None or (self.classifier_kind == "ibi" and not rhythm_resolvable):
+        # Beat-shape gate. The IBI classifier only sees beat times, so split or missed beats
+        # look exactly like AF to it — the cause of every false AF call on the device so far.
+        # This rejects windows whose detected peaks do not look like the window's own pulse,
+        # without rejecting irregular timing (AF beats keep a normal shape).
+        morph_res = beat_morphology_sqi(filtered, np.asarray(peaks_idx), 100.0)
+        sqi_res = dict(sqi_res, beat_morphology=morph_res)
+        beats_reliable = morph_res["is_valid"]
+        if (current_bpm is None or (self.classifier_kind == "ibi" and not rhythm_resolvable)
+                or (self.classifier_kind == "ibi" and not beats_reliable)):
+            invalid_reason = ("no_pulse_detected" if current_bpm is None else
+                              "insufficient_beats" if not rhythm_resolvable else
+                              "unreliable_beats")
             telemetry_payload = {
                 "ts": ts_latest,
                 "iso_time": datetime.now(timezone.utc).isoformat(),
                 "patient_id": self.patient_id,
                 "device_id": self.device_id,
                 "measurement_valid": False,
-                "invalid_reason": "no_pulse_detected" if current_bpm is None else "insufficient_beats",
+                "invalid_reason": invalid_reason,
                 "median_ir": round(median_ir, 1),
                 "bpm": None,
                 "af_detected": None,
@@ -430,6 +484,7 @@ class EdgeInferenceRunner:
                 "raw_window": [],
                 "gradcam_weights": [],
                 "event_id": None,
+                "af_consensus": self._record_window_flag(None),
             }
             self.broadcast_telemetry(telemetry_payload)
             return telemetry_payload
@@ -459,15 +514,17 @@ class EdgeInferenceRunner:
         t_ml_end = time.perf_counter_ns()
         inference_latency_ms = (t_ml_end - t_ml_start) / 1_000_000.0
 
-        # Update rolling decision history for temporal consensus
-        self.decision_history.append(int(af_detected))
-        if len(self.decision_history) > self.consensus_window_size:
-            self.decision_history.pop(0)
-        consensus_af = int(sum(self.decision_history) >= self.consensus_k) if len(self.decision_history) >= self.consensus_k else int(af_detected)
+        consensus_af = self._record_window_flag(int(af_detected))
 
-        # 5. Cryptographic Hash Chaining Persistence (if AF detected or periodic anchor)
+        # 5. Cryptographic Hash Chaining Persistence.
+        #    Only a consensus AF decision is a ledger event — a single 10 s window must never
+        #    raise one (it did until 2026-10-12, writing ~200 false events in three sessions).
+        #    At most one event per window length while the episode persists.
         db_event_id = None
-        if af_detected:
+        due = (self.last_event_sample is None
+               or self.sample_count - self.last_event_sample >= self.window_size)
+        if consensus_af and due:
+            self.last_event_sample = self.sample_count
             # Serialise Grad-CAM top regions for clinical record
             event_rec = self.db.record_event(
                 patient_id=self.patient_id,

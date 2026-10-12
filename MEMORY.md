@@ -161,6 +161,14 @@ Rebuild + evidence packs: `02 - Code Review/2026-10-01 - ML Rebuild - Working AF
    non-degeneracy check on both sensitivity and specificity before it ships. Decided
    2026-10-01.
 
+13. **Measurement site is the WRIST, over the radial pulse** — reverses the 2026-09-11
+   fingertip decision. Team decision relayed by the user 2026-10-12. Consequence for every
+   accuracy statement: the model is trained on fingertip-transmissive PPG (MIMIC) and has
+   **no wrist validation at all**. The old DeepBeat wrist figure (0.583) is not evidence,
+   because 32 Hz cannot resolve AF. The wrist enclosure in `08 - Hardware/` becomes the
+   primary housing. Radial-site PPG is sensitive to strap pressure and tendon motion, so
+   the test protocol must fix posture (seated, forearm resting, still).
+
 ---
 
 ## Open questions / blockers
@@ -168,16 +176,14 @@ Rebuild + evidence packs: `02 - Code Review/2026-10-01 - ML Rebuild - Working AF
 Resolved items are deleted, not archived, so stale figures cannot be re-quoted from here.
 
 **Blocking the thesis claim**
-- [ ] **HIGHEST VALUE — collect labelled data from the project's own MAX30102.** `ibi_af_v1`
-      is trained on transmissive bedside PPG; the MAX30102 is a reflectance sensor, so
-      reflectance-vs-transmissive transfer is unmeasured. Per the 2026-09-11 decision the
-      primary site is now the **fingertip**, so this needs the **fingertip housing, which is
-      not built yet** (the committed enclosure is the wrist one, retained as the secondary
-      comparison). Even a few hours from consenting AF and non-AF subjects enables the
-      transfer measurement. **No further modelling closes this gap.**
-- [ ] **Fingertip housing not yet designed/printed.** The 2026-09-11 decision makes fingertip
-      primary and the wrist enclosure a secondary comparison, but only the wrist part exists.
-      The CAD is parametric and the sensor boss / light-seal / aperture logic reuses directly.
+- [ ] **HIGHEST VALUE — collect labelled WRIST data from the project's own MAX30102.**
+      `ibi_af_v1` is trained on fingertip-transmissive bedside PPG; the deployment is
+      wrist-reflectance over the radial pulse (decision 13), so transfer is unmeasured and
+      likely the largest gap in the thesis. Non-AF testers first (capture script exists),
+      then consenting AF subjects (needs a clinic contact via the adviser).
+      **No further modelling closes this gap.**
+- [ ] **Residual single-window false AF at the wrist (~26% of valid windows, one tester):** the model's
+      ICU-trained negatives don't cover healthy wrist HRV + peak jitter. Needs own-device wrist data → adaptation.
 - [ ] **Adviser sign-off on two reversals** — settled decisions **9** (dataset roles) and
       **11** (Ch. 2 topology amendment + the deployed classifier not being a CNN). Evidence
       packs: §1 and §3 of `02 - Code Review/2026-10-01 - ML Rebuild - ...`.
@@ -190,6 +196,9 @@ Resolved items are deleted, not archived, so stale figures cannot be re-quoted f
 **Engineering / deployment**
 - [ ] **On-device false AF** (2026-10-06): chain verified end-to-end, but `ibi_af_v1` flags a resting
       non-AF fingertip as AF from bad beat detection. Needs steady contact + morphology SQI.
+      **2026-10-12: all 3 non-AF testers flagged.** SQI PI bug fixed locally (not deployed);
+      model also over-flags young high-HRV sinus rhythm (32–44% of windows, clean beats).
+      Gates + corrected consensus deployed same day; thresholds tuned on ONE capture — re-check.
 - [ ] **Hardware verification** (`PLAN.md` §7): ESP32-C3 into the Pi, restart both services,
       confirm a real waveform and a live `ibi_af_v1` decision in the dashboard.
 - [ ] **Fabric channel/chaincode contract** undefined — blocks `sync_worker.py`.
@@ -217,6 +226,24 @@ Short lines only; promote anything substantial to a real note and link it here.
 ---
 
 ## Session log
+
+### 2026-10-12 — Claude (Opus 5.5): all three non-AF testers flagged AF — diagnosis
+- Pi unreachable this session, so the subjects' raw data was not inspected. Offline: clean beats → 0% false AF;
+  ±30/50 ms beat-timing error → 11%/52%. Classifier and DSP are not broken.
+- **Ledger (pulled later):** 200 AF events over 3 sessions, BPM 50–107, driving IBIs 0.31–2.10 s, 29–51% >200 ms off
+  median → beat-detection failure, not the high-HRV limit.
+- **Fixed (copied to Pi, restart pending sudo password):** SQI perfusion index used raw max−min, so baseline drift passed a 0.03%
+  pulse as valid. Now uses filtered 5–95th percentile range. Regression test added.
+- **Model limit found:** young high-HRV sinus rhythm (RMSSD 50–70 ms) is flagged in 32–44% of windows even
+  with perfect beats, because MIMIC negatives are ICU patients. Firmware LED/averaging trial proposed.
+  Note: `02 - Code Review/2026-10-12 - False AF on Three Non-AF Subjects - Diagnosis.md`.
+- **Later same day, deployed to Pi (restart pending):** beat-morphology gate (`unreliable_beats`), saturation gate,
+  and consensus fixed. It was 5 overlapping windows and unused (ledger + banner fired per window, i.e. spec 83.6%, not
+  the quoted 93.8%); now 3-of-5 non-overlapping windows drives both. Raw capture of a non-AF tester: alarms 8/15 → 0/111.
+  MIMIC AF retention 96.8% (in-sample). `scripts/capture_raw.py` records raw device data without a restart.
+- **Site = wrist over radial pulse (decision 13).** Firmware flashed: IR 25 mA, 16384 nA range, 4x avg (noise 33→13,
+  pulse 133→256 counts, 100 Hz kept). **Polarity fixed:** runner inverts the DSP path (`PPG_INVERT=1`); after-flash
+  capture 49/50 windows valid, 13 AF windows, 0 consensus alarms in 60 s. Residual = ICU-negative HRV limit + jitter.
 
 ### 2026-10-06 (later) — Claude (Opus 5.5): first live sensor run — chain works, AF calls are false
 - Hardware: sensor and OLED were both wired SDA/SCL-swapped; fixed by the team, both now on 8/9.

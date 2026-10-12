@@ -86,3 +86,87 @@ def test_empty_input_handling(sqi_assessor):
     res = sqi_assessor.compute_metrics(np.array([]), np.array([]))
     assert res["is_valid"] is False
     assert res["sqi_score"] == 0.0
+
+
+def test_baseline_drift_does_not_pass_weak_pulse(sqi_assessor, bp_filter):
+    """
+    Regression (device false-AF, 2026-10-06/12): a 30-count pulse on ~100k DC is a 0.03%
+    perfusion index and must be rejected, even when the finger drifts by 1,000 counts over
+    the window. Raw max-min PI counted the drift as pulse and passed this window.
+    """
+    from signal_processing.filter import detrend_ppg
+    t = np.arange(1000) / 100.0
+    rng = np.random.default_rng(0)
+    raw = 100000.0 + 15.0 * np.sin(2 * np.pi * 1.2 * t) + 100.0 * t + rng.normal(0, 5, 1000)
+    filtered = bp_filter.apply(detrend_ppg(raw))
+
+    res = sqi_assessor.compute_metrics(raw, filtered)
+
+    assert res["perfusion_index"] < 0.15
+    assert res["is_valid"] is False
+
+
+# ---------------------------------------------------------------- beat-morphology gate
+from signal_processing.sqi import beat_morphology_sqi, is_saturated
+from signal_processing.peak_detection import ElgendiPeakDetector
+
+
+def _ppg_from_beats(beat_times_s, n=1000, fs=100.0):
+    """Systolic + dicrotic Gaussian pulse at each beat onset; amplitude varies per beat."""
+    t = np.arange(n) / fs
+    x = np.zeros(n)
+    rng = np.random.default_rng(3)
+    for b in beat_times_s:
+        a = rng.uniform(0.6, 1.0)  # AF has beat-to-beat amplitude variation too
+        x += a * (np.exp(-((t - b - 0.15) / 0.06) ** 2) + 0.4 * np.exp(-((t - b - 0.42) / 0.09) ** 2))
+    return x
+
+
+def _beats(ibis_s, start=0.2):
+    return start + np.concatenate([[0.0], np.cumsum(ibis_s)])
+
+
+def test_morphology_gate_keeps_regular_rhythm(bp_filter):
+    x = bp_filter.apply(_ppg_from_beats(_beats([0.83] * 11)))
+    peaks = ElgendiPeakDetector().detect_peaks(x)
+    assert beat_morphology_sqi(x, peaks)["is_valid"] is True
+
+
+def test_morphology_gate_keeps_irregular_af_like_rhythm(bp_filter):
+    """The gate must not reject a window for irregular timing — that would reject real AF."""
+    rng = np.random.default_rng(7)
+    ibis = rng.uniform(0.45, 1.10, size=14)
+    x = bp_filter.apply(_ppg_from_beats(_beats(ibis)))
+    peaks = ElgendiPeakDetector().detect_peaks(x)
+    res = beat_morphology_sqi(x, peaks)
+    assert res["is_valid"] is True, res
+
+
+def test_morphology_gate_rejects_split_beats(bp_filter):
+    """Regression (device, 2026-10-12): the dicrotic wave counted as a second beat."""
+    beats = _beats([0.83] * 11)
+    x = bp_filter.apply(_ppg_from_beats(beats))
+    true_peaks = ElgendiPeakDetector().detect_peaks(x)
+    dicrotic = (np.asarray(beats) * 100 + 42).astype(int)
+    peaks = np.sort(np.concatenate([true_peaks, dicrotic[dicrotic < 990]]))
+    assert beat_morphology_sqi(x, peaks)["is_valid"] is False
+
+
+def test_morphology_gate_rejects_missed_beats(bp_filter):
+    x = bp_filter.apply(_ppg_from_beats(_beats([0.83] * 11)))
+    peaks = ElgendiPeakDetector().detect_peaks(x)
+    res = beat_morphology_sqi(x, peaks[::2])  # every other pulse undetected
+    assert res["undetected_pulses"] >= 2
+    assert res["is_valid"] is False
+
+
+def test_morphology_gate_needs_four_beats(bp_filter):
+    x = bp_filter.apply(_ppg_from_beats(_beats([0.83] * 11)))
+    assert beat_morphology_sqi(x, np.array([100, 183, 266]))["is_valid"] is False
+
+
+def test_saturation_detection():
+    assert is_saturated(np.full(1000, 262143.0)) is True
+    assert is_saturated(np.r_[np.full(999, 105000.0), 262100.0]) is True
+    assert is_saturated(np.full(1000, 105000.0)) is False
+    assert is_saturated(np.array([])) is False

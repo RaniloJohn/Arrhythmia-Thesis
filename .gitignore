@@ -55,3 +55,7 @@ scratch/
 # Credentials kept as a readable vault note rather than a dotenv, so it can be
 # opened in Obsidian alongside the rest of the documentation. Never committed.
 CREDENTIALS.md
+
+# Raw MAX30102 recordings from team members / subjects (scripts/capture_raw.py and the
+# runner's auto-capture). Personal physiological data: never commit, never push.
+03 - ML/data/device_captures/

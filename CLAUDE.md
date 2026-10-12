@@ -46,9 +46,11 @@ contract.
    **0.970 (95% CI [0.908, 1.000], n=35)**; 100% sens / 93.8% spec at the subject level
    with 3-of-5 consensus. **Always quote the interval and n=35.** It was trained on MIMIC
    PERform AF (bedside pulse-oximetry PPG, transmissive) and has **never been validated on
-   this project's own MAX30102**, which is a **reflectance** sensor. Per the team's 2026-09-11
-   decision the primary site is now the fingertip, so the residual gap is reflectance vs
-   transmissive at a matching site. State that limitation whenever accuracy is described.
+   this project's own MAX30102**, which is a **reflectance** sensor. Per the team's 2026-10-12
+   decision the measurement site is the **wrist, over the radial pulse** (reversing the
+   2026-09-11 fingertip decision), so the gap is fingertip-transmissive → wrist-reflectance,
+   the larger of the two. There is **no wrist accuracy figure at all** until own-device wrist
+   data exists. State that limitation whenever accuracy is described.
    **The 1D-CNN is NOT validated and `cnn_af_v1.npz` must never be cited.** Its Chapter 2
    topology has a 0.12 s receptive field, so no convolutional feature can observe even one
    inter-beat interval. The 2026-09-13 figures (85.4% sensitivity, AUROC 0.494, CV

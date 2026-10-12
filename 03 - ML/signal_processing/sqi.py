@@ -64,7 +64,13 @@ class SignalQualityAssessor:
             pi = 0.0
             pi_available = False
         else:
-            ac_val = float(np.max(raw_data) - np.min(raw_data))
+            # AC is taken from the band-passed window, not raw max-min: raw max-min counts
+            # baseline drift and contact settling as "pulse", so a sensor sliding on the skin
+            # inflated PI ~10x and passed the gate with a 0.03% true pulse — the
+            # windows that produced false AF on the device (2026-10-06/12 field tests).
+            # 5th-95th percentile keeps one spike from standing in for the pulse amplitude.
+            lo, hi = np.percentile(filtered_data, [5, 95])
+            ac_val = float(hi - lo)
             pi = float((ac_val / abs(dc_val)) * 100.0)
 
         # 2. Skewness and Kurtosis of zero-phase filtered window
@@ -102,3 +108,76 @@ class SignalQualityAssessor:
             "pi_available": bool(pi_available),
             "is_valid": bool(is_valid)
         }
+
+
+# MAX30102 ADC full scale at 18-bit resolution. A window that touches it has clipped pulse
+# tops (or no pulse at all) — typically a finger pressed hard enough to saturate the IR
+# photodiode — so nothing measured from it is a heartbeat.
+MAX30102_FULL_SCALE = 262143
+
+
+def is_saturated(raw_data: np.ndarray, full_scale: int = MAX30102_FULL_SCALE,
+                 margin: int = 64) -> bool:
+    """True when any raw sample is at (or within `margin` counts of) ADC full scale."""
+    raw = np.asarray(raw_data)
+    return bool(raw.size and np.max(raw) >= full_scale - margin)
+
+
+def beat_morphology_sqi(filtered: np.ndarray, peaks: np.ndarray, fs: float = 100.0,
+                        pre_s: float = 0.25, post_s: float = 0.15, r_min: float = 0.90,
+                        min_good_fraction: float = 0.70,
+                        max_undetected: int = 1) -> Dict[str, Any]:
+    """
+    Beat-template quality check: are the detected peaks actually pulses?
+
+    The IBI classifier sees only beat times, so a split beat (one pulse counted twice) or a
+    missed beat is indistinguishable to it from AF. This gate catches those detection errors
+    from the waveform rather than from the intervals, so it does **not** reject a window for
+    being irregular — AF beats keep a normal pulse shape even when their timing is chaotic.
+    (Template matching after Orphanidou et al. 2015 and Li & Clifford 2012.)
+
+    1. Each detected peak is cut out as a short segment (upstroke + peak), mean-removed, and
+       correlated with the window's median beat. A beat is good when r >= `r_min`.
+    2. Prominent maxima that no detected peak accounts for are counted as undetected pulses.
+
+    The window is valid when at least `min_good_fraction` of beats are good and no more than
+    `max_undetected` pulses were missed.
+
+    Thresholds were chosen on 2026-10-12 against MIMIC PERform AF (non-overlapping eval
+    windows, all 35 subjects) and one 2-min raw MAX30102 WRIST capture of a non-AF subject:
+    keeps 95.2% of AF and 91.4% of non-AF MIMIC windows; rejects 21 of 23 device windows,
+    and neither retained device window was classified AF. Longer segments (covering the
+    downstroke) dropped MIMIC AF retention below 93%, because AF beat lengths vary.
+    The thresholds rest on one device capture and must be re-checked on more device data.
+    """
+    x = np.asarray(filtered, dtype=np.float64)
+    p = np.asarray(peaks, dtype=np.int64).ravel()
+    pre, post = int(round(pre_s * fs)), int(round(post_s * fs))
+    usable = p[(p >= pre) & (p < len(x) - post)]
+    out = {"n_beats": int(usable.size), "good_fraction": 0.0, "median_r": 0.0,
+           "undetected_pulses": 0, "is_valid": False}
+    if usable.size < 4:
+        return out
+
+    segs = np.stack([x[i - pre:i + post] for i in usable])
+    segs = segs - segs.mean(axis=1, keepdims=True)
+    tmpl = np.median(segs, axis=0)
+    tmpl = tmpl - tmpl.mean()  # Pearson r: both vectors centred
+    denom = np.linalg.norm(segs, axis=1) * np.linalg.norm(tmpl)
+    r = np.where(denom > 0, segs @ tmpl / np.where(denom > 0, denom, 1.0), 0.0)
+
+    # Prominence of each detected peak against the lowest point within 0.4 s either side.
+    half = int(round(0.4 * fs))
+    prom = np.array([x[i] - min(x[max(0, i - half):i + 1].min(), x[i:i + half].min())
+                     for i in p])
+    from scipy.signal import find_peaks
+    cand, _ = find_peaks(x, prominence=0.5 * float(np.median(prom)),
+                         distance=max(1, int(round(0.30 * fs))))
+    tol = int(round(0.15 * fs))
+    undetected = int(sum(np.min(np.abs(p - c)) > tol for c in cand)) if p.size else 0
+
+    good = float(np.mean(r >= r_min))
+    out.update(good_fraction=round(good, 3), median_r=round(float(np.median(r)), 3),
+               undetected_pulses=undetected,
+               is_valid=bool(good >= min_good_fraction and undetected <= max_undetected))
+    return out

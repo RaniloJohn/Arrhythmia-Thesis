@@ -42,7 +42,9 @@ class LiveStreamManager {
       no_skin_contact: 'No skin contact — place finger or wrist on the sensor',
       low_signal_quality: 'Signal quality too low for a reliable measurement',
       no_pulse_detected: 'Sensor in contact, but no pulse could be resolved',
-      insufficient_beats: 'Too few clean beats to assess rhythm — hold still'
+      insufficient_beats: 'Too few clean beats to assess rhythm — hold still',
+      sensor_saturated: 'Sensor saturated — rest the finger more lightly on the sensor',
+      unreliable_beats: 'Pulse waveform too noisy to time beats reliably — hold still, rest the finger lightly'
     };
     const message = reasons[data.invalid_reason] || 'No valid measurement';
 
@@ -225,15 +227,18 @@ class LiveStreamManager {
     }
 
     // 3. Update Alert Banner (NSR vs AF)
-    const isAf = data.af_detected === 1 || afProb >= 0.50;
+    // The alarm follows the edge runner's k-of-n consensus over non-overlapping windows,
+    // which is the operating point the validated figures describe. A single window's
+    // probability is shown as a number but never raises the banner on its own.
+    const isAf = data.af_consensus === 1;
     if (this.alertBanner) {
       this.alertBanner.className = `alert-banner ${isAf ? 'af' : 'nsr'}`;
       if (isAf) {
-        this.alertText.innerHTML = `ATRIAL FIBRILLATION DETECTED &mdash; ${(afProb * 100).toFixed(1)}% Confidence`;
-        this.alertSubtext.innerText = 'High Grad-CAM regional activation identified. Clinical evaluation recommended.';
+        this.alertText.innerHTML = `POSSIBLE ATRIAL FIBRILLATION &mdash; sustained irregular rhythm`;
+        this.alertSubtext.innerText = 'Irregular beat intervals in 3 of the last 5 ten-second windows. Screening result only; confirm with ECG.';
       } else {
-        this.alertText.innerHTML = `NORMAL SINUS RHYTHM (NSR) &mdash; ${(afProb * 100).toFixed(1)}% AF Index`;
-        this.alertSubtext.innerText = 'Stable PPG morphological contours. No acute irregularity detected.';
+        this.alertText.innerHTML = `NO AF DETECTED &mdash; this window ${(afProb * 100).toFixed(1)}% AF index`;
+        this.alertSubtext.innerText = 'No sustained irregular rhythm across recent windows.';
       }
     }
 

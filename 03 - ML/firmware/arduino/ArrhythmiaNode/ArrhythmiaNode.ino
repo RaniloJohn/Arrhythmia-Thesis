@@ -321,18 +321,26 @@ void setup() {
         display.print("Check SDA/SCL 8/9");
         display.display();
     } else {
-        // Engineering configuration matching ANTIGRAVITY.md §4.1:
-        // Red + IR mode, 100 Hz sampling rate, 411 us pulse width (18-bit ADC resolution)
-        byte ledBrightness = 60;   // ~12 mA drive current
-        byte sampleAverage = 1;    // 1 sample per FIFO read (no hardware averaging for pure 100 Hz)
+        // Wrist (radial pulse) configuration — 2026-10-12, team decision 13.
+        // The previous fingertip-level drive (IR 0x1F ~6.2 mA, 4096 nA range, no averaging)
+        // gave a ~50-100 count pulse on a baseline wandering by hundreds at the wrist, too
+        // weak to time beats from. Changes, all keeping the 100 Hz output and wire protocol:
+        //  - LED drive ~4x (0x7F ~25.4 mA): wrist tissue returns far less pulsatile light.
+        //  - ADC range 4x (16384 nA): headroom for the brighter LED, so a pressed sensor
+        //    no longer pins the ADC at 262143. 4x current / 4x range keeps DC counts near
+        //    their previous level, so the 50000-count contact thresholds still apply.
+        //  - 400 Hz internal rate with 4-sample averaging -> 100 Hz FIFO output with ~2x
+        //    lower white noise. 411 us pulse width is permitted at 400 sps in SpO2 mode.
+        byte ledBrightness = 0x7F; // overridden per channel below
+        byte sampleAverage = 4;    // 4-sample on-chip average -> 100 Hz into the FIFO
         byte ledMode = 2;          // 2 = Red + IR dual-channel mode
-        int sampleRate = 100;      // 100 Hz sampling rate
+        int sampleRate = 400;      // internal rate; 400 / 4 = 100 Hz output
         int pulseWidth = 411;      // 411 us (18-bit ADC resolution)
-        int adcRange = 4096;       // 4096 nA full-scale range
+        int adcRange = 16384;      // 16384 nA full-scale range
 
         particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
-        particleSensor.setPulseAmplitudeRed(0x1F); // ~6.4 mA
-        particleSensor.setPulseAmplitudeIR(0x1F);  // ~6.4 mA
+        particleSensor.setPulseAmplitudeRed(0x7F); // ~25.4 mA
+        particleSensor.setPulseAmplitudeIR(0x7F);  // ~25.4 mA
     }
 }
 
