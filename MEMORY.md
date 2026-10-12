@@ -203,7 +203,7 @@ Resolved items are deleted, not archived, so stale figures cannot be re-quoted f
       confirm a real waveform and a live `ibi_af_v1` decision in the dashboard.
 - [ ] **Fabric channel/chaincode contract** undefined — blocks `sync_worker.py`.
 - [ ] **No notification channel** exists yet (RQ4 is only partly answered without one).
-- [ ] **Unmeasured for RQ5:** CPU/RAM utilisation, 24 h soak test, SUS usability survey.
+- [ ] **Unmeasured for RQ5:** CPU/RAM utilisation, 24 h soak test, SUS usability survey. (Pi latency: done 2026-10-12.)
 - [ ] **Live DB still holds 3 fabricated patients and 2 seeded accounts** whose passwords are
       in git history. Cleanup deferred at the owner's request.
 - [ ] Stray default-Obsidian files in `Vault/` — safe to delete once confirmed with the user.
@@ -244,6 +244,10 @@ Short lines only; promote anything substantial to a real note and link it here.
 - **Site = wrist over radial pulse (decision 13).** Firmware flashed: IR 25 mA, 16384 nA range, 4x avg (noise 33→13,
   pulse 133→256 counts, 100 Hz kept). **Polarity fixed:** runner inverts the DSP path (`PPG_INVERT=1`); after-flash
   capture 49/50 windows valid, 13 AF windows, 0 consensus alarms in 60 s. Residual = ICU-negative HRV limit + jitter.
+- **Pi 5 latency measured** (`scripts/benchmark_pipeline.py`, 636 replayed windows, live service running): end-to-end
+  median 8.0 / p95 9.6 / max 17.3 ms, 0 over 25 ms. `budget_met` now judges end-to-end, not inference only.
+- **Every AF call now saves its raw window** to `data/device_captures/auto/` (gitignored, capped 2000). Pi checkout synced
+  by git bundle and clean at the latest commit; restart pending to activate capture + new log line.
 
 ### 2026-10-06 (later) — Claude (Opus 5.5): first live sensor run — chain works, AF calls are false
 - Hardware: sensor and OLED were both wired SDA/SCL-swapped; fixed by the team, both now on 8/9.

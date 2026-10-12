@@ -56,9 +56,13 @@ contract.
    inter-beat interval. The 2026-09-13 figures (85.4% sensitivity, AUROC 0.494, CV
    0.330) are void — that model scored 0.349 on its own training data. So are the DeepBeat
    dataset figures: it holds **20.0 h** of unique signal (2.4 h AF), not 3,725 h.
-2. Latency: the edge pipeline runs in **3.6–7.3 ms** on the dev machine, well inside the
-   25 ms budget. **This has not yet been re-measured on the Pi** with `ibi_af_v1`, so do
-   not quote it as a deployment figure. `ANTIGRAVITY.md` §5's "~13.08 ms" is stale.
+2. Latency, **measured on the Raspberry Pi 5** (2026-10-12, `scripts/benchmark_pipeline.py`,
+   636 windows replayed from real wrist captures, live service running alongside): end-to-end
+   per window **median 8.0 ms, p95 9.6 ms, p99 10.2 ms, max 17.3 ms**; 0 of 636 at or over the
+   25 ms budget. Classification + beat-level explanation is 5.4 ms of that. It covers DSP,
+   quality gates, peak detection, classification, explanation and a hash-chained ledger write.
+   It does **not** cover serial transport or dashboard rendering. The 3.6–7.3 ms dev-machine
+   figure and `ANTIGRAVITY.md` §5's "~13.08 ms" are stale.
 3. The live database still contains 3 fabricated patients and 2 seeded accounts whose
    passwords are in git history. Cleanup is deferred at the owner's request.
 
