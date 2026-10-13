@@ -1,7 +1,7 @@
 ---
 name: MEMORY
 description: Persistent AI memory and cheap session-bootstrap file — read this first, load everything else on demand.
-updated: 2026-10-01
+updated: 2026-10-13
 ---
 
 # MEMORY.md — AI Session Memory & Vault Bootstrap
@@ -199,6 +199,9 @@ Resolved items are deleted, not archived, so stale figures cannot be re-quoted f
       **2026-10-12: all 3 non-AF testers flagged.** SQI PI bug fixed locally (not deployed);
       model also over-flags young high-HRV sinus rhythm (32–44% of windows, clean beats).
       Gates + corrected consensus deployed same day; thresholds tuned on ONE capture — re-check.
+      **2026-10-13 re-test: same 3 testers → 0 alarms** (single-window AF 0%/16%/3%). Residual
+      = one missed/misplaced beat per window → ectopic-interval filtering proposed (needs MIMIC re-validation).
+      **New subject S4 alarmed once on a poor signal — rhythm status unknown, redo owed.**
 - [ ] **Hardware verification** (`PLAN.md` §7): ESP32-C3 into the Pi, restart both services,
       confirm a real waveform and a live `ibi_af_v1` decision in the dashboard.
 - [ ] **Fabric channel/chaincode contract** undefined — blocks `sync_worker.py`.
@@ -226,6 +229,17 @@ Short lines only; promote anything substantial to a real note and link it here.
 ---
 
 ## Session log
+
+### 2026-10-13 — Claude (Opus 5.5): wrist re-test of the three non-AF testers
+- Pi had rebooted onto `ac7abd7` before the session, so the 10-12 fixes were already live — no sudo needed.
+  Dashboard reached via SSH tunnel (`-L 8080:localhost:8080`, Pi has IPv6 link-local only) → `http://localhost:8080`.
+- **S1–S3 (falsely alarmed on 10-12): 0 alarms, 0 new ledger events.** Single-window AF on the clean runs 0/67,
+  18/115, 2/71. Poor-contact runs are rejected by the gates, not alarmed. Max end-to-end 21.2 ms.
+- Residual AF windows are a regular rhythm with one ≈2× interval (missed beat) or short–long pair (misplaced peak
+  or real ectopic). Morphology gate can't see these. Proposed: ectopic-interval filtering, MIMIC re-validation first.
+- **S4 (new, status unknown): 1 alarm (ledger 518→519)** on a poor signal (86/120 windows `unreliable_beats`). Unresolved.
+- Logs + 18 auto-captured AF windows in `03 - ML/data/device_captures/2026-10-13_retest/` (gitignored).
+  Note: `02 - Code Review/2026-10-13 - Wrist Re-test of the Three Non-AF Subjects.md`. Pi clock still ~8 days behind.
 
 ### 2026-10-12 — Claude (Opus 5.5): all three non-AF testers flagged AF — diagnosis
 - Pi unreachable this session, so the subjects' raw data was not inspected. Offline: clean beats → 0% false AF;

@@ -23,6 +23,7 @@ File names: `YYYY-MM-DD - <component>.md`. This is where Claude Code review sess
 | 2026-10-01 | [[2026-10-01 - ML Rebuild - Working AF Classifier and Chapter 2 Topology Amendment|ML Rebuild - Working AF Classifier & Chapter 2 Topology Amendment]] | Claude (Opus 5) | delivered |
 | 2026-10-06 | [[2026-10-06 - First Live Sensor Run - Runner Crash, Sample Drops and False AF on Device|First Live Sensor Run - Runner Crash, Sample Drops & False AF on Device]] | Claude (Opus 5.5) | open |
 | 2026-10-12 | [[2026-10-12 - False AF on Three Non-AF Subjects - Diagnosis|False AF on Three Non-AF Subjects - Diagnosis]] | Claude (Opus 5.5) | open |
+| 2026-10-13 | [[2026-10-13 - Wrist Re-test of the Three Non-AF Subjects|Wrist Re-test of the Three Non-AF Subjects]] | Claude (Opus 5.5) | open |
 
 ## Architectural Audits
 
