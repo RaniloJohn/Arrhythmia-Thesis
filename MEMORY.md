@@ -1,7 +1,7 @@
 ---
 name: MEMORY
 description: Persistent AI memory and cheap session-bootstrap file — read this first, load everything else on demand.
-updated: 2026-10-13
+updated: 2026-10-19
 ---
 
 # MEMORY.md — AI Session Memory & Vault Bootstrap
@@ -201,6 +201,9 @@ Resolved items are deleted, not archived, so stale figures cannot be re-quoted f
       Gates + corrected consensus deployed same day; thresholds tuned on ONE capture — re-check.
       **2026-10-13 re-test: same 3 testers → 0 alarms** (single-window AF 0%/16%/3%). Residual
       = one missed/misplaced beat per window → ectopic-interval filtering proposed (needs MIMIC re-validation).
+      **2026-10-19: ectopic filtering tested and NOT adopted** (no MIMIC gain, AF-window cost; fixes only
+      glitch windows that consensus already absorbs). Windows that matter are grossly irregular from bad
+      beats that pass the morphology gate → next lever is a stricter signal-quality gate.
       **New subject S4 alarmed once on a poor signal — rhythm status unknown, redo owed.**
 - [ ] **Hardware verification** (`PLAN.md` §7): ESP32-C3 into the Pi, restart both services,
       confirm a real waveform and a live `ibi_af_v1` decision in the dashboard.
@@ -229,6 +232,16 @@ Short lines only; promote anything substantial to a real note and link it here.
 ---
 
 ## Session log
+
+### 2026-10-19 — Claude (Opus 5.5): ectopic-interval filtering — tested, not adopted (branch `exp/ectopic-filter`)
+- Read-only harness `training/eval_ectopic_filter.py` reproduces `ibi_af_v1` exactly (0.9704 [0.908, 1.000]).
+  Six filter variants, infer-only and retrain, same patient-disjoint folds. No weights, runtime, `main` or Pi touched.
+- MIMIC: subject AUROC 0.970 → 0.974 (noise); guard still alters ~11% of AF windows; 3-of-5 spec 93.8% → 87.5% via a
+  knife-edge subject. **Side finding: two subjects sit within ±0.01 of the 0.92 flag-rate cutoff — the quoted
+  100%/93.8% consensus point is fragile; lead with AUROC + CI.**
+- Device: 18 → 14 false-AF windows. ~8 are regular+one-glitch (filter fixes half; consensus already absorbs these);
+  ~10 are grossly irregular (S1 poor contact, S4) and passed the morphology gate — signal quality, not intervals.
+  Note: `02 - Code Review/2026-10-19 - Ectopic Interval Filtering - MIMIC Re-validation.md`.
 
 ### 2026-10-13 — Claude (Opus 5.5): wrist re-test of the three non-AF testers
 - Pi had rebooted onto `ac7abd7` before the session, so the 10-12 fixes were already live — no sudo needed.

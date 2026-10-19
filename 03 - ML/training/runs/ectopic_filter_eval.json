@@ -1,0 +1,992 @@
+{
+ "protocol": "see module docstring",
+ "deployed_operating_point": {
+  "tau": 0.32,
+  "consensus": "3-of-5",
+  "subject_flag_rate": 0.92
+ },
+ "mimic": {
+  "none": {
+   "corrected_af_windows": 0.0,
+   "corrected_nonaf_windows": 0.0,
+   "infer_only": {
+    "subj_auroc": 0.9704,
+    "ci95": [
+     0.9082,
+     1.0
+    ],
+    "win_auroc": 0.936,
+    "win_sens": 0.9591,
+    "win_spec": 0.8359,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.938,
+     "fn": 0,
+     "fp": 1,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.983,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.925,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.975,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.983,
+      "mimic_mimic_perform_af_016": 0.983,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.083,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.192,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.042,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.912,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.983,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   },
+   "retrain": {
+    "subj_auroc": 0.9704,
+    "ci95": [
+     0.9082,
+     1.0
+    ],
+    "win_auroc": 0.936,
+    "win_sens": 0.9591,
+    "win_spec": 0.8359,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.938,
+     "fn": 0,
+     "fp": 1,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.983,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.925,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.975,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.983,
+      "mimic_mimic_perform_af_016": 0.983,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.083,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.192,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.042,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.912,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.983,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   }
+  },
+  "naive tol.15": {
+   "corrected_af_windows": 0.5587,
+   "corrected_nonaf_windows": 0.1536,
+   "infer_only": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.9116,
+     1.0
+    ],
+    "win_auroc": 0.9372,
+    "win_sens": 0.9327,
+    "win_spec": 0.8626,
+    "consensus_at_deployed": {
+     "sens": 0.947,
+     "spec": 0.938,
+     "fn": 1,
+     "fp": 1,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.925,
+      "mimic_mimic_perform_af_002": 0.975,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.9,
+      "mimic_mimic_perform_af_006": 0.958,
+      "mimic_mimic_perform_af_007": 0.967,
+      "mimic_mimic_perform_af_008": 0.966,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.958,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.025,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.075,
+      "mimic_mimic_perform_non_af_007": 0.0,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.008,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.86,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.967,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   },
+   "retrain": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.913,
+     1.0
+    ],
+    "win_auroc": 0.9365,
+    "win_sens": 0.9587,
+    "win_spec": 0.8276,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.875,
+     "fn": 0,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.975,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.933,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.966,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.983,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.017,
+      "mimic_mimic_perform_non_af_004": 0.3,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.083,
+      "mimic_mimic_perform_non_af_007": 0.058,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.0,
+      "mimic_mimic_perform_non_af_010": 0.042,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.983,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   }
+  },
+  "guard cv.08 tol.15": {
+   "corrected_af_windows": 0.0585,
+   "corrected_nonaf_windows": 0.0956,
+   "infer_only": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.915,
+     1.0
+    ],
+    "win_auroc": 0.9396,
+    "win_sens": 0.9464,
+    "win_spec": 0.8548,
+    "consensus_at_deployed": {
+     "sens": 0.947,
+     "spec": 0.875,
+     "fn": 1,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.958,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.9,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.975,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.967,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.025,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.075,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.033,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.967,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   },
+   "retrain": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.913,
+     1.0
+    ],
+    "win_auroc": 0.9428,
+    "win_sens": 0.9582,
+    "win_spec": 0.8454,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.875,
+     "fn": 0,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.983,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.958,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.983,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.983,
+      "mimic_mimic_perform_af_016": 0.975,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.017,
+      "mimic_mimic_perform_non_af_004": 0.025,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.083,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.0,
+      "mimic_mimic_perform_non_af_010": 0.033,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.983,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   }
+  },
+  "guard cv.10 tol.15": {
+   "corrected_af_windows": 0.1081,
+   "corrected_nonaf_windows": 0.1029,
+   "infer_only": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.915,
+     1.0
+    ],
+    "win_auroc": 0.9391,
+    "win_sens": 0.9411,
+    "win_spec": 0.8553,
+    "consensus_at_deployed": {
+     "sens": 0.947,
+     "spec": 0.875,
+     "fn": 1,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.95,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.9,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.933,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.967,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.025,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.075,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.033,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.967,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   },
+   "retrain": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.913,
+     1.0
+    ],
+    "win_auroc": 0.9419,
+    "win_sens": 0.9569,
+    "win_spec": 0.8417,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.875,
+     "fn": 0,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.975,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.958,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.966,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.983,
+      "mimic_mimic_perform_af_016": 0.975,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.017,
+      "mimic_mimic_perform_non_af_004": 0.058,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.083,
+      "mimic_mimic_perform_non_af_007": 0.0,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.0,
+      "mimic_mimic_perform_non_af_010": 0.033,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.983,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   }
+  },
+  "guard cv.15 tol.15": {
+   "corrected_af_windows": 0.2791,
+   "corrected_nonaf_windows": 0.1202,
+   "infer_only": {
+    "subj_auroc": 0.9704,
+    "ci95": [
+     0.9052,
+     1.0
+    ],
+    "win_auroc": 0.9363,
+    "win_sens": 0.9349,
+    "win_spec": 0.8568,
+    "consensus_at_deployed": {
+     "sens": 0.947,
+     "spec": 0.875,
+     "fn": 1,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.95,
+      "mimic_mimic_perform_af_002": 0.975,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.9,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.967,
+      "mimic_mimic_perform_af_008": 0.966,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.958,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.025,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.075,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.008,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.967,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   },
+   "retrain": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.913,
+     1.0
+    ],
+    "win_auroc": 0.9388,
+    "win_sens": 0.9565,
+    "win_spec": 0.8349,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.875,
+     "fn": 0,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.975,
+      "mimic_mimic_perform_af_002": 0.975,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.942,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.966,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.983,
+      "mimic_mimic_perform_af_016": 0.975,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.017,
+      "mimic_mimic_perform_non_af_004": 0.125,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.083,
+      "mimic_mimic_perform_non_af_007": 0.058,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.0,
+      "mimic_mimic_perform_non_af_010": 0.042,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.983,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   }
+  },
+  "guard cv.10 tol.20": {
+   "corrected_af_windows": 0.0879,
+   "corrected_nonaf_windows": 0.0768,
+   "infer_only": {
+    "subj_auroc": 0.9704,
+    "ci95": [
+     0.9082,
+     1.0
+    ],
+    "win_auroc": 0.9381,
+    "win_sens": 0.9495,
+    "win_spec": 0.8474,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.875,
+     "fn": 0,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.975,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.925,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.95,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.967,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.025,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.117,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.025,
+      "mimic_mimic_perform_non_af_010": 0.033,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.967,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   },
+   "retrain": {
+    "subj_auroc": 0.9737,
+    "ci95": [
+     0.913,
+     1.0
+    ],
+    "win_auroc": 0.9397,
+    "win_sens": 0.9574,
+    "win_spec": 0.8375,
+    "consensus_at_deployed": {
+     "sens": 1.0,
+     "spec": 0.875,
+     "fn": 0,
+     "fp": 2,
+     "flag_rate": {
+      "mimic_mimic_perform_af_001": 0.975,
+      "mimic_mimic_perform_af_002": 0.983,
+      "mimic_mimic_perform_af_003": 0.983,
+      "mimic_mimic_perform_af_004": 0.983,
+      "mimic_mimic_perform_af_005": 0.958,
+      "mimic_mimic_perform_af_006": 0.983,
+      "mimic_mimic_perform_af_007": 0.983,
+      "mimic_mimic_perform_af_008": 0.95,
+      "mimic_mimic_perform_af_009": 0.983,
+      "mimic_mimic_perform_af_010": 0.983,
+      "mimic_mimic_perform_af_011": 0.983,
+      "mimic_mimic_perform_af_012": 0.983,
+      "mimic_mimic_perform_af_013": 0.983,
+      "mimic_mimic_perform_af_014": 0.983,
+      "mimic_mimic_perform_af_015": 0.958,
+      "mimic_mimic_perform_af_016": 0.983,
+      "mimic_mimic_perform_af_017": 0.967,
+      "mimic_mimic_perform_af_018": 0.983,
+      "mimic_mimic_perform_af_019": 0.983,
+      "mimic_mimic_perform_non_af_001": 0.0,
+      "mimic_mimic_perform_non_af_002": 0.0,
+      "mimic_mimic_perform_non_af_003": 0.0,
+      "mimic_mimic_perform_non_af_004": 0.042,
+      "mimic_mimic_perform_non_af_005": 0.0,
+      "mimic_mimic_perform_non_af_006": 0.167,
+      "mimic_mimic_perform_non_af_007": 0.025,
+      "mimic_mimic_perform_non_af_008": 0.0,
+      "mimic_mimic_perform_non_af_009": 0.0,
+      "mimic_mimic_perform_non_af_010": 0.033,
+      "mimic_mimic_perform_non_af_011": 0.0,
+      "mimic_mimic_perform_non_af_012": 0.947,
+      "mimic_mimic_perform_non_af_013": 0.0,
+      "mimic_mimic_perform_non_af_014": 0.967,
+      "mimic_mimic_perform_non_af_015": 0.0,
+      "mimic_mimic_perform_non_af_016": 0.0
+     }
+    }
+   }
+  }
+ },
+ "device": {
+  "2026-10-12_tester1_radial_after (49/50 windows classified)": {
+   "none": {
+    "n": 49,
+    "af_calls": 13,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 49,
+    "af_calls": 10,
+    "corrected": 30
+   },
+   "guard cv.08 tol.15": {
+    "n": 49,
+    "af_calls": 11,
+    "corrected": 26
+   },
+   "guard cv.10 tol.15": {
+    "n": 49,
+    "af_calls": 10,
+    "corrected": 29
+   },
+   "guard cv.15 tol.15": {
+    "n": 49,
+    "af_calls": 10,
+    "corrected": 30
+   },
+   "guard cv.10 tol.20": {
+    "n": 49,
+    "af_calls": 11,
+    "corrected": 29
+   }
+  },
+  "2026-10-12_tester1_radial_before (20/51 windows classified)": {
+   "none": {
+    "n": 20,
+    "af_calls": 0,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 20,
+    "af_calls": 0,
+    "corrected": 4
+   },
+   "guard cv.08 tol.15": {
+    "n": 20,
+    "af_calls": 0,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 20,
+    "af_calls": 0,
+    "corrected": 1
+   },
+   "guard cv.15 tol.15": {
+    "n": 20,
+    "af_calls": 0,
+    "corrected": 3
+   },
+   "guard cv.10 tol.20": {
+    "n": 20,
+    "af_calls": 0,
+    "corrected": 0
+   }
+  },
+  "2026-10-12_tester1_wrist_1 (45/111 windows classified)": {
+   "none": {
+    "n": 45,
+    "af_calls": 32,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 45,
+    "af_calls": 31,
+    "corrected": 24
+   },
+   "guard cv.08 tol.15": {
+    "n": 45,
+    "af_calls": 32,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 45,
+    "af_calls": 32,
+    "corrected": 0
+   },
+   "guard cv.15 tol.15": {
+    "n": 45,
+    "af_calls": 32,
+    "corrected": 6
+   },
+   "guard cv.10 tol.20": {
+    "n": 45,
+    "af_calls": 32,
+    "corrected": 0
+   }
+  },
+  "10-13 auto-captured AF windows, run S1": {
+   "none": {
+    "n": 2,
+    "af_calls": 2,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 2,
+    "af_calls": 2,
+    "corrected": 1
+   },
+   "guard cv.08 tol.15": {
+    "n": 2,
+    "af_calls": 2,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 2,
+    "af_calls": 2,
+    "corrected": 0
+   },
+   "guard cv.15 tol.15": {
+    "n": 2,
+    "af_calls": 2,
+    "corrected": 0
+   },
+   "guard cv.10 tol.20": {
+    "n": 2,
+    "af_calls": 2,
+    "corrected": 0
+   }
+  },
+  "10-13 auto-captured AF windows, run S2b": {
+   "none": {
+    "n": 4,
+    "af_calls": 4,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 4,
+    "af_calls": 2,
+    "corrected": 3
+   },
+   "guard cv.08 tol.15": {
+    "n": 4,
+    "af_calls": 2,
+    "corrected": 3
+   },
+   "guard cv.10 tol.15": {
+    "n": 4,
+    "af_calls": 2,
+    "corrected": 3
+   },
+   "guard cv.15 tol.15": {
+    "n": 4,
+    "af_calls": 2,
+    "corrected": 3
+   },
+   "guard cv.10 tol.20": {
+    "n": 4,
+    "af_calls": 2,
+    "corrected": 3
+   }
+  },
+  "10-13 auto-captured AF windows, run S2b/S3b": {
+   "none": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.08 tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.15 tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.10 tol.20": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 1
+   }
+  },
+  "10-13 auto-captured AF windows, run S3": {
+   "none": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 1,
+    "af_calls": 0,
+    "corrected": 1
+   },
+   "guard cv.08 tol.15": {
+    "n": 1,
+    "af_calls": 0,
+    "corrected": 1
+   },
+   "guard cv.10 tol.15": {
+    "n": 1,
+    "af_calls": 0,
+    "corrected": 1
+   },
+   "guard cv.15 tol.15": {
+    "n": 1,
+    "af_calls": 0,
+    "corrected": 1
+   },
+   "guard cv.10 tol.20": {
+    "n": 1,
+    "af_calls": 0,
+    "corrected": 1
+   }
+  },
+  "10-13 auto-captured AF windows, run S3b": {
+   "none": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.08 tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.15 tol.15": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   },
+   "guard cv.10 tol.20": {
+    "n": 1,
+    "af_calls": 1,
+    "corrected": 0
+   }
+  },
+  "10-13 auto-captured AF windows, run S4": {
+   "none": {
+    "n": 3,
+    "af_calls": 3,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 3,
+    "af_calls": 2,
+    "corrected": 1
+   },
+   "guard cv.08 tol.15": {
+    "n": 3,
+    "af_calls": 3,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 3,
+    "af_calls": 3,
+    "corrected": 0
+   },
+   "guard cv.15 tol.15": {
+    "n": 3,
+    "af_calls": 3,
+    "corrected": 0
+   },
+   "guard cv.10 tol.20": {
+    "n": 3,
+    "af_calls": 3,
+    "corrected": 0
+   }
+  },
+  "10-13 auto-captured AF windows, run unattributed": {
+   "none": {
+    "n": 6,
+    "af_calls": 6,
+    "corrected": 0
+   },
+   "naive tol.15": {
+    "n": 6,
+    "af_calls": 5,
+    "corrected": 3
+   },
+   "guard cv.08 tol.15": {
+    "n": 6,
+    "af_calls": 6,
+    "corrected": 0
+   },
+   "guard cv.10 tol.15": {
+    "n": 6,
+    "af_calls": 5,
+    "corrected": 1
+   },
+   "guard cv.15 tol.15": {
+    "n": 6,
+    "af_calls": 5,
+    "corrected": 1
+   },
+   "guard cv.10 tol.20": {
+    "n": 6,
+    "af_calls": 5,
+    "corrected": 1
+   }
+  }
+ }
+}
