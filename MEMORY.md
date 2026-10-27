@@ -233,6 +233,20 @@ Short lines only; promote anything substantial to a real note and link it here.
 
 ## Session log
 
+### 2026-10-27 — Claude (Opus 5.5): revised the thesis defense script
+- Old script (proposal-era) claimed the 1D-CNN, "blockchain protection / encrypted, tamper-proof", 24/7 monitoring,
+  and had no results. Rewritten around `ibi_af_v1`, the hash-chained ledger (Fabric deferred), and measured results.
+- Script doc: https://claude.ai/artifact/DV1cXsD3uEw2hNKRwFBBut · summary + team to-dos:
+  `05 - Claude Notes/2026-10-27 - Defense Script Revision.md`.
+
+### 2026-10-21 — Claude (Opus 5.5): reflashed the ESP32 from the Pi
+- **Tailscale is not installed on the laptop** (100.77.17.38 times out). The Pi is cabled to the laptop: reach it as
+  `ssh ranilo@raspberrypi.local`. TigerVNC `localhost:5900` = Pi screen through an SSH tunnel.
+- **`/etc/sudoers.d/arrhythmia-flash` no longer exists** — stopping/starting the service now needs the sudo password
+  (pipe it to `sudo -S`). `CREDENTIALS.md` is also missing from the laptop vault.
+- Pi sketch == `62a9c0c` (CRLF aside). Clean compile + upload OK (341,008 B, hash verified); runner back up,
+  100 Hz frames arriving (`no_skin_contact`, IR≈709 with nothing on the sensor). Pi clock still reads 2026-10-05.
+
 ### 2026-10-19 — Claude (Opus 5.5): ectopic-interval filtering — tested, not adopted (branch `exp/ectopic-filter`)
 - Read-only harness `training/eval_ectopic_filter.py` reproduces `ibi_af_v1` exactly (0.9704 [0.908, 1.000]).
   Six filter variants, infer-only and retrain, same patient-disjoint folds. No weights, runtime, `main` or Pi touched.
